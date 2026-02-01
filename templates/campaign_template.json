@@ -1,0 +1,16 @@
+{
+  "name": "{{CAMPAIGN_NAME}}",
+  "description": "{{DESCRIPTION}}",
+  "dates": {
+    "start": "{{START_DATE}}",
+    "end": "{{END_DATE}}"
+  },
+  "theme": {
+    "style_override": null,
+    "color_accent": null,
+    "mood": []
+  },
+  "products": [],
+  "content_plan": [],
+  "hashtags_extra": []
+}

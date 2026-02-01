@@ -1,0 +1,126 @@
+{
+  "version": "2026",
+  "description": "Templates de copy para diferentes objetivos y ocasiones",
+  "templates_by_objective": {
+    "promocionar": {
+      "name": "Promoción de producto/servicio",
+      "structures": [
+        {
+          "name": "beneficio_directo",
+          "template": "{emoji_gancho} {beneficio_principal}\n\n{descripcion_breve}\n\n{cta}\n\n{hashtags}",
+          "example": "✨ Tu piel merece lo mejor\n\nNuestra crema hidratante con ácido hialurónico te da 24hs de hidratación.\n\nDisponible en tienda y delivery 📦\n\n#skincare #cuidadopersonal"
+        },
+        {
+          "name": "urgencia",
+          "template": "⏰ {tiempo_limite}\n\n{oferta}\n\n{condiciones}\n\n{cta}",
+          "example": "⏰ Solo hasta el domingo\n\n30% OFF en toda la línea de cuidado facial\n\nVálido en tienda y online. Stock limitado.\n\n➡️ Link en bio"
+        },
+        {
+          "name": "nuevo_producto",
+          "template": "🆕 {anuncio_novedad}\n\n{descripcion_producto}\n\n{disponibilidad}\n\n{cta}",
+          "example": "🆕 Llegó lo que estabas esperando\n\nNuestra hamburguesa BBQ con cheddar ahumado y cebolla caramelizada.\n\nYa disponible en todas nuestras sucursales.\n\n¿Te animás a probarla? 🍔"
+        }
+      ]
+    },
+    "informar": {
+      "name": "Contenido informativo/educativo",
+      "structures": [
+        {
+          "name": "tip_rapido",
+          "template": "💡 {titulo_tip}\n\n{contenido}\n\n{cierre_interactivo}",
+          "example": "💡 ¿Sabías que...?\n\nTomar agua antes de cada comida ayuda a controlar el apetito y mejora la digestión.\n\n¿Cuántos litros tomás por día? 👇"
+        },
+        {
+          "name": "paso_a_paso",
+          "template": "📝 {titulo_guia}\n\n1️⃣ {paso1}\n2️⃣ {paso2}\n3️⃣ {paso3}\n\n{cierre}",
+          "example": "📝 Cómo conservar tu vino una vez abierto\n\n1️⃣ Usá un tapón de vacío\n2️⃣ Guardalo en la heladera\n3️⃣ Consumilo dentro de 3-5 días\n\n¿Tenés algún tip extra? Compartilo 🍷"
+        }
+      ]
+    },
+    "engagement": {
+      "name": "Generar interacción",
+      "structures": [
+        {
+          "name": "pregunta_directa",
+          "template": "{pregunta_gancho}\n\n{opciones_o_contexto}\n\n{invitacion_responder}",
+          "example": "¿Equipo café o equipo mate? ☕🧉\n\nNosotros no podemos elegir, amamos los dos.\n\nContanos tu favorito 👇"
+        },
+        {
+          "name": "esto_o_aquello",
+          "template": "🔥 {titulo_duelo}\n\n{opcion_a} vs {opcion_b}\n\n{invitacion}",
+          "example": "🔥 Duelo de hamburguesas\n\nDoble cheddar 🧀 vs Triple bacon 🥓\n\n¿Cuál elegís? A o B en comentarios"
+        },
+        {
+          "name": "completar_frase",
+          "template": "Completá la frase ✍️\n\n\"{frase_incompleta}...\"\n\n{ejemplo_respuesta}",
+          "example": "Completá la frase ✍️\n\n\"Mi plato favorito de acá es...\"\n\nEmpezamos nosotros: Las empanadas de carne 🥟"
+        }
+      ]
+    },
+    "branding": {
+      "name": "Construcción de marca",
+      "structures": [
+        {
+          "name": "historia_marca",
+          "template": "{emoji_inicio} {titulo_emotivo}\n\n{historia_breve}\n\n{valor_marca}\n\n{agradecimiento}",
+          "example": "🏠 Más que una farmacia, somos tu vecino de confianza\n\nHace 25 años abrimos nuestras puertas con un sueño: cuidar la salud de nuestra comunidad.\n\nHoy seguimos con el mismo compromiso de siempre.\n\nGracias por elegirnos ❤️"
+        },
+        {
+          "name": "detras_escenas",
+          "template": "👀 {titulo_bts}\n\n{descripcion_proceso}\n\n{mensaje_autenticidad}",
+          "example": "👀 Así preparamos tu pedido\n\nCada mañana nuestro equipo llega a las 6am para preparar el pan fresco del día.\n\nPorque lo bueno se nota ✨"
+        }
+      ]
+    },
+    "celebracion": {
+      "name": "Fechas especiales",
+      "structures": [
+        {
+          "name": "felicitacion",
+          "template": "{emoji_celebracion} {saludo_fecha}\n\n{mensaje_emotivo}\n\n{vinculo_marca}",
+          "example": "🎄 ¡Feliz Navidad!\n\nQue esta noche esté llena de amor, familia y buenos momentos.\n\nGracias por acompañarnos este año. Los esperamos el 2026 con más sorpresas 🎁"
+        },
+        {
+          "name": "promocion_fecha",
+          "template": "{emoji} {fecha_especial}\n\n{oferta_tematica}\n\n{validez}\n\n{cta}",
+          "example": "💝 San Valentín se vive en pareja\n\n2x1 en todos nuestros vinos espumantes\n\nSolo del 12 al 14 de febrero\n\nReservá tu mesa ➡️ link en bio"
+        }
+      ]
+    }
+  },
+  "emoji_library": {
+    "comida": ["🍔", "🍕", "🍝", "🥗", "🍰", "☕", "🍷", "🥂"],
+    "celebracion": ["🎉", "🎊", "✨", "🎁", "❤️", "💝", "🎄", "🎆"],
+    "acciones": ["➡️", "👇", "📲", "🛒", "📦", "🚚", "💳"],
+    "estados": ["🆕", "🔥", "⏰", "💡", "📝", "👀", "✅"],
+    "industrias": {
+      "farmacia": ["💊", "🏥", "💆", "🧴", "✨"],
+      "vinos": ["🍷", "🥂", "🍇", "🍾"],
+      "restaurante": ["🍽️", "👨‍🍳", "📍", "⭐"]
+    }
+  },
+  "cta_library": {
+    "compra": [
+      "Comprá ahora ➡️",
+      "Pedí el tuyo",
+      "Disponible en tienda y online",
+      "Link en bio 📲"
+    ],
+    "reserva": [
+      "Reservá tu mesa",
+      "Hacé tu pedido",
+      "Agendá tu turno"
+    ],
+    "interaccion": [
+      "¿Qué opinás?",
+      "Contanos en comentarios 👇",
+      "Etiquetá a quien llevarías",
+      "Compartí con quien necesite esto"
+    ],
+    "info": [
+      "Más info en bio",
+      "Consultanos por DM",
+      "Visitá nuestra web"
+    ]
+  }
+}

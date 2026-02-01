@@ -1,0 +1,31 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+outputs/*
+!outputs/.gitkeep
+brands/*/fonts/*.ttf
+brands/*/fonts/*.otf
+
+# OS
+.DS_Store
+Thumbs.db

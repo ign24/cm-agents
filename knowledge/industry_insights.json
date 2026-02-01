@@ -1,0 +1,154 @@
+{
+  "version": "2026",
+  "description": "Insights y mejores prácticas por industria para contenido de redes sociales",
+  "industries": {
+    "food_restaurant": {
+      "name": "Restaurantes y Comida",
+      "content_pillars": [
+        "producto_hero",
+        "behind_scenes",
+        "menu_destacados",
+        "testimonios",
+        "promociones"
+      ],
+      "best_practices": [
+        "Fotos de comida con luz natural preferentemente",
+        "Mostrar textura y detalle de ingredientes",
+        "Incluir el ambiente del local en algunas fotos",
+        "Videos cortos de preparación generan alto engagement",
+        "Stories para promociones del día"
+      ],
+      "hashtags_recommended": [
+        "#foodie", "#instafood", "#foodporn", "#gastro", 
+        "#comida", "#restaurante", "#chef", "#menu"
+      ],
+      "avoid": [
+        "Fotos oscuras o mal iluminadas",
+        "Platos desordenados o poco apetitosos",
+        "Demasiado texto sobre la imagen",
+        "Promociones sin fecha de vencimiento clara"
+      ],
+      "posting_times": {
+        "feed": ["11:00-13:00", "18:00-20:00"],
+        "story": ["12:00", "19:00", "21:00"]
+      },
+      "recommended_styles": ["lifestyle_warm", "authentic_imperfect", "editorial_magazine"]
+    },
+    "pharmacy": {
+      "name": "Farmacias",
+      "content_pillars": [
+        "productos_destacados",
+        "tips_salud",
+        "promociones",
+        "servicios",
+        "temporada"
+      ],
+      "best_practices": [
+        "Fondo limpio y profesional",
+        "Destacar beneficios, no solo características",
+        "Contenido educativo sobre salud",
+        "Mostrar variedad de productos",
+        "Comunicar servicios adicionales (envío, turnos)"
+      ],
+      "hashtags_recommended": [
+        "#salud", "#bienestar", "#farmacia", "#cuidadopersonal",
+        "#belleza", "#skincare", "#vitaminas"
+      ],
+      "avoid": [
+        "Claims médicos sin respaldo",
+        "Imágenes genéricas de stock",
+        "Texto muy pequeño en promociones",
+        "Olvidar mencionar horarios de atención"
+      ],
+      "posting_times": {
+        "feed": ["09:00-11:00", "17:00-19:00"],
+        "story": ["09:00", "13:00", "18:00"]
+      },
+      "recommended_styles": ["minimal_clean", "soft_wellness", "clinical_precision"]
+    },
+    "wine_spirits": {
+      "name": "Vinos y Bebidas",
+      "content_pillars": [
+        "producto_premium",
+        "maridaje",
+        "origen_historia",
+        "momentos_consumo",
+        "educacion"
+      ],
+      "best_practices": [
+        "Iluminación dramática para productos premium",
+        "Mostrar contexto de consumo (cena, celebración)",
+        "Incluir notas de cata de forma visual",
+        "Destacar premios y reconocimientos",
+        "Contenido sobre regiones y bodegas"
+      ],
+      "hashtags_recommended": [
+        "#vino", "#wine", "#winelover", "#sommelier",
+        "#maridaje", "#bodega", "#malbec"
+      ],
+      "avoid": [
+        "Promover consumo excesivo",
+        "Dirigir contenido a menores",
+        "Imágenes de baja calidad para productos premium",
+        "Olvidar disclaimer de consumo responsable"
+      ],
+      "posting_times": {
+        "feed": ["18:00-21:00"],
+        "story": ["19:00", "21:00"]
+      },
+      "recommended_styles": ["editorial_magazine", "minimal_clean", "dramatic_contrast"]
+    },
+    "retail": {
+      "name": "Retail / Tiendas",
+      "content_pillars": [
+        "nuevos_productos",
+        "promociones",
+        "lookbooks",
+        "user_generated",
+        "tips_uso"
+      ],
+      "best_practices": [
+        "Mostrar productos en contexto de uso",
+        "Crear urgencia en promociones",
+        "Variedad de formatos (carrusel, video, static)",
+        "Destacar envío gratis y facilidades de pago",
+        "Repostear contenido de clientes"
+      ],
+      "hashtags_recommended": [
+        "#shopping", "#ofertas", "#descuentos", "#nuevo",
+        "#tendencias", "#musthave"
+      ],
+      "avoid": [
+        "Promociones sin términos claros",
+        "Imágenes con marca de agua",
+        "Productos agotados sin actualizar",
+        "Ignorar comentarios y preguntas"
+      ],
+      "posting_times": {
+        "feed": ["10:00-12:00", "19:00-21:00"],
+        "story": ["10:00", "15:00", "20:00"]
+      },
+      "recommended_styles": ["minimal_clean", "lifestyle_warm", "bold_maximalist"]
+    }
+  },
+  "general_tips": {
+    "engagement": [
+      "Responder comentarios dentro de las primeras 2 horas",
+      "Usar preguntas en los copies para generar interacción",
+      "CTAs claros y específicos",
+      "Alternar entre contenido promocional y de valor"
+    ],
+    "visual_consistency": [
+      "Mantener paleta de colores de marca",
+      "Usar misma tipografía en overlays",
+      "Estilo fotográfico consistente",
+      "Templates reconocibles para promociones"
+    ],
+    "copy_guidelines": [
+      "Primer línea debe captar atención",
+      "Emojis con moderación y relevancia",
+      "Hashtags al final o en primer comentario",
+      "Máximo 3-5 hashtags relevantes por post"
+    ]
+  }
+}

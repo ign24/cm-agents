@@ -1,0 +1,84 @@
+{
+  "name": "{{BRAND_NAME}}",
+  "handle": "@{{HANDLE}}",
+  "industry": "{{INDUSTRY}}",
+  
+  "identity": {
+    "tagline": "{{TAGLINE}}",
+    "voice": ["profesional", "cercano"],
+    "values": ["calidad", "confianza"]
+  },
+  
+  "assets": {
+    "logo": "assets/logo.png",
+    "logo_white": "assets/logo-white.png",
+    "icon": "assets/icon.png"
+  },
+  
+  "palette": {
+    "primary": "{{PRIMARY_COLOR}}",
+    "secondary": "{{SECONDARY_COLOR}}",
+    "background": "#FFFFFF",
+    "text": "#212121",
+    "accent": "{{ACCENT_COLOR}}",
+    "gradient": ["{{PRIMARY_COLOR}}", "{{SECONDARY_COLOR}}"]
+  },
+  
+  "fonts": {
+    "heading": "fonts/heading.ttf",
+    "body": "fonts/body.ttf",
+    "price": "fonts/heading.ttf"
+  },
+  
+  "typography": {
+    "heading": {
+      "font": "fonts/heading.ttf",
+      "style": "bold, impactful"
+    },
+    "body": {
+      "font": "fonts/body.ttf",
+      "style": "readable, friendly"
+    },
+    "price": {
+      "font": "fonts/heading.ttf",
+      "style": "bold, attention-grabbing"
+    }
+  },
+  
+  "style": {
+    "mood": ["profesional", "moderno"],
+    "photography_style": "professional product photography, clean lighting",
+    "preferred_backgrounds": ["clean white background", "neutral surface"],
+    "preferred_design_styles": ["minimal_clean", "lifestyle_warm"],
+    "avoid": ["cluttered backgrounds", "harsh shadows"]
+  },
+  
+  "text_overlay": {
+    "price_badge": {
+      "bg_color": "{{PRIMARY_COLOR}}",
+      "text_color": "#FFFFFF",
+      "position": "bottom-left",
+      "padding": 20
+    },
+    "title": {
+      "color": "#FFFFFF",
+      "shadow": true,
+      "position": "top-center"
+    },
+    "logo": {
+      "position": "top-right",
+      "size": "small",
+      "opacity": 1.0
+    }
+  },
+  
+  "social_media": {
+    "instagram": "@{{HANDLE}}",
+    "platforms": ["instagram"]
+  },
+  
+  "hashtags": {
+    "always": ["#{{HASHTAG}}"],
+    "categories": {}
+  }
+}

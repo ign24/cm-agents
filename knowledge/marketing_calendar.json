@@ -1,0 +1,86 @@
+{
+  "version": "2026",
+  "description": "Calendario de fechas clave para marketing por industria",
+  "global_dates": {
+    "enero": [
+      {"date": "01", "name": "Año Nuevo", "industries": ["all"], "content_type": "celebración"},
+      {"date": "06", "name": "Día de Reyes", "industries": ["retail", "food"], "content_type": "promoción"}
+    ],
+    "febrero": [
+      {"date": "14", "name": "San Valentín", "industries": ["food_restaurant", "retail", "fashion"], "content_type": "promoción"},
+      {"date": "variable", "name": "Carnaval", "industries": ["food_restaurant", "wine_spirits"], "content_type": "evento"}
+    ],
+    "marzo": [
+      {"date": "08", "name": "Día de la Mujer", "industries": ["all"], "content_type": "awareness"},
+      {"date": "21", "name": "Día del Padre (algunos países)", "industries": ["retail", "tech", "food"], "content_type": "promoción"}
+    ],
+    "mayo": [
+      {"date": "01", "name": "Día del Trabajador", "industries": ["all"], "content_type": "awareness"},
+      {"date": "segundo_domingo", "name": "Día de la Madre", "industries": ["retail", "food_restaurant", "fashion"], "content_type": "promoción"}
+    ],
+    "junio": [
+      {"date": "tercer_domingo", "name": "Día del Padre", "industries": ["retail", "tech", "wine_spirits"], "content_type": "promoción"},
+      {"date": "21", "name": "Inicio de Invierno (sur) / Verano (norte)", "industries": ["food", "fashion"], "content_type": "seasonal"}
+    ],
+    "julio": [
+      {"date": "09", "name": "Día de la Independencia (Argentina)", "industries": ["food_restaurant"], "content_type": "celebración"}
+    ],
+    "septiembre": [
+      {"date": "21", "name": "Día de la Primavera / Estudiante", "industries": ["food_restaurant", "retail"], "content_type": "promoción"}
+    ],
+    "octubre": [
+      {"date": "12", "name": "Día del Respeto a la Diversidad Cultural", "industries": ["all"], "content_type": "awareness"},
+      {"date": "31", "name": "Halloween", "industries": ["food_restaurant", "retail"], "content_type": "evento"}
+    ],
+    "noviembre": [
+      {"date": "variable", "name": "Black Friday", "industries": ["all"], "content_type": "promoción"},
+      {"date": "variable", "name": "Cyber Monday", "industries": ["tech", "retail"], "content_type": "promoción"}
+    ],
+    "diciembre": [
+      {"date": "24-25", "name": "Navidad", "industries": ["all"], "content_type": "celebración"},
+      {"date": "31", "name": "Fin de Año", "industries": ["food_restaurant", "wine_spirits"], "content_type": "celebración"}
+    ]
+  },
+  "industry_specific": {
+    "food_restaurant": {
+      "fechas_especiales": [
+        "Día de la Pizza (9 feb)",
+        "Día del Helado (variable)",
+        "Día de la Hamburguesa (28 mayo)",
+        "Día del Café (1 oct)"
+      ],
+      "temporadas_altas": ["verano", "fiestas_fin_año", "vacaciones_invierno"]
+    },
+    "pharmacy": {
+      "fechas_especiales": [
+        "Día de la Salud (7 abril)",
+        "Día del Farmacéutico (variable)"
+      ],
+      "temporadas_altas": ["invierno", "primavera_alergias"]
+    },
+    "wine_spirits": {
+      "fechas_especiales": [
+        "Día del Malbec (17 abril)",
+        "Día del Vino (variable)",
+        "Vendimia (marzo)"
+      ],
+      "temporadas_altas": ["otoño", "fiestas_fin_año"]
+    },
+    "retail": {
+      "fechas_especiales": [
+        "Hot Sale (mayo)",
+        "Back to School (febrero/marzo)"
+      ],
+      "temporadas_altas": ["black_friday", "navidad", "dia_madre", "dia_padre"]
+    }
+  },
+  "recommendations": {
+    "anticipation": "Preparar contenido 2-3 semanas antes de fechas importantes",
+    "post_event": "Crear contenido de agradecimiento post-evento",
+    "frequency": {
+      "fechas_importantes": "3-5 posts",
+      "temporada_alta": "post diario",
+      "temporada_baja": "3-4 posts por semana"
+    }
+  }
+}

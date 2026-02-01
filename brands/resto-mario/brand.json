@@ -1,0 +1,95 @@
+{
+  "name": "Restaurante Mario",
+  "handle": "@restomario",
+  "industry": "food_restaurant",
+  
+  "identity": {
+    "tagline": "Sabor de casa",
+    "voice": ["familiar", "cálido", "cercano"],
+    "values": ["calidad", "tradición", "frescura", "sabor casero"]
+  },
+  
+  "assets": {
+    "logo": "assets/logo.png",
+    "logo_white": "assets/logo-white.png",
+    "icon": "assets/icon.png"
+  },
+  
+  "logo": "assets/logo.png",
+  
+  "palette": {
+    "primary": "#D32F2F",
+    "secondary": "#FFC107",
+    "background": "#FFFFFF",
+    "text": "#212121",
+    "accent": "#4CAF50",
+    "gradient": ["#D32F2F", "#FF5252"]
+  },
+  
+  "fonts": {
+    "heading": "fonts/Montserrat-Bold.ttf",
+    "body": "fonts/OpenSans-Regular.ttf",
+    "price": "fonts/Montserrat-ExtraBold.ttf"
+  },
+  
+  "typography": {
+    "heading": {
+      "font": "fonts/Montserrat-Bold.ttf",
+      "style": "bold, impactful, appetizing"
+    },
+    "body": {
+      "font": "fonts/OpenSans-Regular.ttf",
+      "style": "readable, friendly"
+    },
+    "price": {
+      "font": "fonts/Montserrat-ExtraBold.ttf",
+      "style": "bold, attention-grabbing, promotional"
+    }
+  },
+  
+  "style": {
+    "mood": ["cálido", "familiar", "apetitoso"],
+    "photography_style": "close-up, warm lighting, steam visible, rustic props",
+    "preferred_backgrounds": [
+      "rustic wooden table",
+      "warm restaurant ambiance",
+      "cozy kitchen setting"
+    ],
+    "preferred_design_styles": ["lifestyle_warm", "authentic_imperfect"],
+    "avoid": ["cold colors", "clinical look", "minimalist stark", "blue tones"]
+  },
+  
+  "text_overlay": {
+    "price_badge": {
+      "bg_color": "#D32F2F",
+      "text_color": "#FFFFFF",
+      "position": "bottom-left",
+      "padding": 20
+    },
+    "title": {
+      "color": "#FFFFFF",
+      "shadow": true,
+      "position": "top-center"
+    },
+    "logo": {
+      "position": "top-right",
+      "size": "small",
+      "opacity": 1.0
+    }
+  },
+  
+  "social_media": {
+    "instagram": "@restomario",
+    "facebook": "RestauranteMario",
+    "platforms": ["instagram", "facebook"]
+  },
+  
+  "hashtags": {
+    "always": ["#RestoMario", "#ComidaCasera"],
+    "categories": {
+      "hamburguesas": ["#Hamburguesa", "#BurgerLovers", "#FoodPorn"],
+      "pizzas": ["#Pizza", "#PizzaTime", "#PizzaLovers"],
+      "bebidas": ["#Refrescante", "#BebidaFria"]
+    }
+  }
+}

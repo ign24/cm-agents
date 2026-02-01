@@ -1,0 +1,513 @@
+{
+  "version": "2026.01",
+  "last_updated": "2026-01-24",
+
+  "design_principles": {
+    "composition": {
+      "rule_of_thirds": {
+        "description": "Divide the frame into 9 equal parts using 2 horizontal and 2 vertical lines. Place key elements at intersections.",
+        "prompt_keywords": ["rule of thirds composition", "off-center subject", "balanced asymmetry"]
+      },
+      "golden_ratio": {
+        "description": "Use the 1:1.618 ratio for naturally pleasing proportions.",
+        "prompt_keywords": ["golden ratio composition", "spiral composition", "fibonacci framing"]
+      },
+      "negative_space": {
+        "description": "Leave intentional empty areas to create breathing room and space for text overlays.",
+        "prompt_keywords": ["ample negative space", "minimalist composition", "clean background area"]
+      },
+      "leading_lines": {
+        "description": "Use lines to guide the viewer's eye toward the product.",
+        "prompt_keywords": ["leading lines", "directional composition", "visual flow"]
+      },
+      "framing": {
+        "description": "Use elements to frame the subject and draw attention.",
+        "prompt_keywords": ["natural framing", "environmental framing", "frame within frame"]
+      }
+    },
+
+    "visual_hierarchy": {
+      "focal_point": "The product should always be the primary focal point",
+      "secondary_elements": "Props and background support but don't compete",
+      "text_zones": {
+        "feed_4_5": {
+          "safe_top": "150px",
+          "safe_bottom": "200px",
+          "recommended_text_area": "top-center or bottom-left"
+        },
+        "story_9_16": {
+          "safe_top": "250px",
+          "safe_bottom": "340px",
+          "recommended_text_area": "center-lower-third"
+        }
+      }
+    }
+  },
+
+  "lighting_styles": {
+    "soft_studio": {
+      "description": "Even, diffused lighting that eliminates harsh shadows",
+      "prompt": "soft studio lighting, diffused light, even illumination, no harsh shadows",
+      "best_for": ["product shots", "food photography", "clean aesthetic"]
+    },
+    "golden_hour": {
+      "description": "Warm, directional light that creates depth and warmth",
+      "prompt": "golden hour lighting, warm sunlight, long shadows, orange-tinted ambient light",
+      "best_for": ["lifestyle shots", "outdoor products", "warm mood"]
+    },
+    "natural_window": {
+      "description": "Soft directional light from a window source",
+      "prompt": "natural window light, soft directional lighting, gentle shadows, indoor natural light",
+      "best_for": ["authentic aesthetic", "home products", "food"]
+    },
+    "dramatic_contrast": {
+      "description": "High contrast lighting with defined shadows",
+      "prompt": "dramatic lighting, high contrast, defined shadows, chiaroscuro effect",
+      "best_for": ["editorial style", "luxury products", "premium feel"]
+    },
+    "backlit_glow": {
+      "description": "Light from behind creating rim lighting and glow",
+      "prompt": "backlit, rim lighting, glowing edges, ethereal atmosphere",
+      "best_for": ["beverages", "translucent products", "dreamy aesthetic"]
+    },
+    "flat_lay": {
+      "description": "Even overhead lighting for top-down shots",
+      "prompt": "flat lay lighting, overhead even light, minimal shadows, clean top-down",
+      "best_for": ["product arrangements", "food flat lays", "organized compositions"]
+    }
+  },
+
+  "color_psychology": {
+    "instagram_effective": {
+      "high_engagement": ["#E8A87C", "#85DCB8", "#F9D423", "#FC913A", "#FF6F61"],
+      "contrast_with_ui": ["warm coral", "sage green", "golden yellow", "terracotta"],
+      "avoid": ["pure white backgrounds (blend with UI)", "Instagram blue (#405DE6)"]
+    },
+    "mood_colors": {
+      "warm_inviting": ["#E8A87C", "#D4A574", "#C9A66B", "#B8860B"],
+      "fresh_clean": ["#85DCB8", "#90EE90", "#98FB98", "#7FFFD4"],
+      "premium_luxury": ["#1C1C1C", "#2C2C2C", "#B8860B", "#FFD700"],
+      "playful_energetic": ["#FF6F61", "#FF4500", "#FF6347", "#FFA07A"]
+    }
+  },
+
+  "trends_2026": {
+    "authentic_imperfect": {
+      "description": "Content that feels real and tactile rather than overly polished",
+      "prompt_additions": ["authentic feel", "natural imperfections", "handcrafted texture", "organic aesthetic"],
+      "negative_prompts": ["overly perfect", "artificial", "plastic look", "too polished"]
+    },
+    "biophilic_design": {
+      "description": "Integration of natural elements and organic materials",
+      "prompt_additions": ["natural elements", "plants in background", "organic materials", "nature-integrated"],
+      "props": ["green plants", "natural wood", "stone surfaces", "dried flowers", "terracotta"]
+    },
+    "tactile_craft": {
+      "description": "Emphasis on texture and handmade quality",
+      "prompt_additions": ["tactile textures", "handcrafted feel", "artisanal quality", "visible texture"],
+      "materials": ["linen", "ceramic", "raw wood", "woven fabric", "handmade paper"]
+    },
+    "warm_tones": {
+      "description": "Shift toward warm, earthy color palettes",
+      "prompt_additions": ["warm color palette", "earthy tones", "terracotta accents", "golden warmth"],
+      "colors": ["terracotta", "burnt sienna", "warm beige", "golden ochre", "dusty rose"]
+    },
+    "mixed_media_collage": {
+      "description": "Magazine-style layouts combining multiple elements",
+      "prompt_additions": ["editorial composition", "magazine layout feel", "layered elements"],
+      "use_cases": ["lifestyle content", "fashion", "travel"]
+    }
+  },
+
+  "styles": {
+    "minimal_clean": {
+      "name": "Minimal Clean",
+      "description": "Simple, uncluttered compositions with focus on the product",
+      "lighting": "soft_studio",
+      "composition": "centered or rule_of_thirds",
+      "background": ["pure white", "light gray", "soft cream", "subtle gradient"],
+      "props": "none or minimal",
+      "prompt_template": "Professional product photography of {product}, minimalist composition, {background} background, soft studio lighting, clean aesthetic, sharp focus, ample negative space for text, commercial quality, 8K detail",
+      "negative_prompt": "cluttered, busy background, harsh shadows, distracting elements, text, watermark"
+    },
+    "lifestyle_warm": {
+      "name": "Lifestyle Warm",
+      "description": "Cozy, inviting scenes that show products in context",
+      "lighting": "natural_window or golden_hour",
+      "composition": "rule_of_thirds with environmental context",
+      "background": ["rustic wooden table", "cozy home interior", "kitchen scene", "café ambiance"],
+      "props": ["complementary items", "fabric textures", "plants", "books", "ceramic dishes"],
+      "prompt_template": "Lifestyle product photography of {product} in a cozy {context}, warm natural lighting, {props} as styling elements, inviting atmosphere, shallow depth of field, authentic feel, space in {text_zone} for text overlay, warm color palette",
+      "negative_prompt": "cold lighting, sterile environment, artificial look, harsh shadows, cluttered"
+    },
+    "editorial_magazine": {
+      "name": "Editorial Magazine",
+      "description": "High-impact compositions suitable for magazine spreads",
+      "lighting": "dramatic_contrast or studio_dramatic",
+      "composition": "dramatic angles, strong negative space",
+      "background": ["solid color", "gradient", "textured wall", "artistic backdrop"],
+      "props": "minimal, purposeful",
+      "prompt_template": "Editorial product photography of {product}, dramatic composition, {lighting} lighting, strong visual impact, magazine-quality, bold negative space on {text_zone} for headline, high contrast, fashion photography aesthetic, premium feel",
+      "negative_prompt": "busy, cluttered, amateur, flat lighting, boring composition"
+    },
+    "authentic_imperfect": {
+      "name": "Authentic Imperfect",
+      "description": "Real, tactile aesthetic that embraces natural imperfections",
+      "lighting": "natural_window with natural shadows",
+      "composition": "casual, slightly off-center",
+      "background": ["natural textures", "worn wood", "linen fabric", "handmade surfaces"],
+      "props": ["handcrafted items", "natural materials", "imperfect ceramics"],
+      "prompt_template": "Authentic product photography of {product} on {surface}, natural daylight, organic textures, handcrafted aesthetic, subtle imperfections that feel real and tactile, warm earthy tones, {text_zone} area for text, artisanal quality",
+      "negative_prompt": "overly perfect, artificial, plastic, too polished, sterile, clinical"
+    },
+    "biophilic_nature": {
+      "name": "Biophilic Nature",
+      "description": "Integration with natural elements and organic environment",
+      "lighting": "natural_window or golden_hour",
+      "composition": "product integrated with nature elements",
+      "background": ["green plants", "natural stone", "outdoor garden", "botanical setting"],
+      "props": ["live plants", "flowers", "leaves", "natural wood", "moss", "stones"],
+      "prompt_template": "Biophilic product photography of {product} surrounded by {natural_elements}, natural lighting, green plants and organic materials, nature-integrated composition, fresh and alive feeling, sustainable aesthetic, {text_zone} for text, earthy color palette",
+      "negative_prompt": "artificial plants, plastic, synthetic materials, indoor sterile environment"
+    },
+    "pharmacy_clinical": {
+      "name": "Pharmacy Clinical",
+      "description": "Clean, trustworthy aesthetic for pharmaceutical and health products",
+      "lighting": "soft_studio",
+      "composition": "centered, professional, reassuring",
+      "background": ["clean white", "soft blue gradient", "light mint", "medical white"],
+      "props": ["minimal", "clean surfaces", "subtle medical elements"],
+      "prompt_template": "Professional pharmaceutical product photography of {product}, clean clinical aesthetic, soft even studio lighting, {background} background, trustworthy and professional feel, medical-grade cleanliness, sharp focus on product details and packaging, {text_zone} for dosage or info text, reassuring healthcare aesthetic, 8K commercial quality",
+      "negative_prompt": "dirty, cluttered, unprofessional, scary medical imagery, syringes, blood, harsh lighting"
+    },
+    "pharmacy_wellness": {
+      "name": "Pharmacy Wellness",
+      "description": "Warm, approachable health and wellness aesthetic",
+      "lighting": "natural_window",
+      "composition": "lifestyle context with health focus",
+      "background": ["soft natural tones", "light wood", "wellness spa aesthetic"],
+      "props": ["natural ingredients", "herbs", "plants", "wellness items"],
+      "prompt_template": "Wellness product photography of {product}, natural and healthy aesthetic, soft natural lighting, surrounded by {props} suggesting natural ingredients, approachable healthcare feel, warm but clean, {text_zone} for product info, holistic wellness mood, 8K detail",
+      "negative_prompt": "clinical sterile, cold, intimidating, chemical, artificial, plastic"
+    },
+    "wine_elegant": {
+      "name": "Wine Elegant",
+      "description": "Sophisticated, premium wine and spirits presentation",
+      "lighting": "dramatic_contrast",
+      "composition": "dramatic angles, bottle as hero",
+      "background": ["dark moody", "wine cellar", "rustic wood", "vineyard subtle"],
+      "props": ["wine glass", "corkscrew", "grapes", "cheese board", "candles"],
+      "prompt_template": "Elegant wine photography of {product}, dramatic moody lighting with highlights on bottle glass, {background} setting, premium sophisticated aesthetic, {props} as subtle styling, rich deep colors, condensation or reflection details visible, {text_zone} for wine name and vintage, sommelier-quality presentation, 8K detail",
+      "negative_prompt": "cheap looking, bright harsh lighting, plastic cups, casual, unprofessional"
+    },
+    "wine_casual": {
+      "name": "Wine Casual",
+      "description": "Approachable, lifestyle wine presentation for everyday moments",
+      "lighting": "golden_hour or natural_window",
+      "composition": "lifestyle context, social setting",
+      "background": ["outdoor terrace", "dinner table", "picnic setting", "home gathering"],
+      "props": ["wine glasses being held", "food pairing", "friends gathering", "casual table setting"],
+      "prompt_template": "Lifestyle wine photography of {product} in a {context} setting, warm golden lighting, approachable and inviting atmosphere, {props} creating social moment, everyday luxury feel, {text_zone} for casual text, relatable wine moment, 8K quality",
+      "negative_prompt": "stuffy, pretentious, too formal, dark cellar, intimidating"
+    },
+    "medical_professional": {
+      "name": "Medical Professional",
+      "description": "Authoritative, trustworthy medical and healthcare aesthetic",
+      "lighting": "soft_studio",
+      "composition": "clean, precise, professional",
+      "background": ["medical blue", "clean white", "subtle gradient", "clinical environment"],
+      "props": ["stethoscope", "medical charts", "clean equipment", "professional context"],
+      "prompt_template": "Professional medical product photography of {product}, authoritative healthcare aesthetic, clean soft studio lighting, {background} environment, trustworthy and precise feel, medical-grade presentation, {text_zone} for medical information, clinical excellence, 8K sharp detail",
+      "negative_prompt": "scary, blood, needles prominent, pain imagery, unprofessional, dirty, casual"
+    },
+    "luxury_premium": {
+      "name": "Luxury Premium",
+      "description": "High-end, aspirational luxury product presentation",
+      "lighting": "dramatic_contrast with soft highlights",
+      "composition": "dramatic, sophisticated, premium",
+      "background": ["black velvet", "marble", "gold accents", "dark gradient"],
+      "props": ["silk fabric", "gold elements", "crystals", "premium materials"],
+      "prompt_template": "Luxury product photography of {product}, premium high-end aesthetic, dramatic studio lighting with elegant highlights, {background} surface, {props} as luxurious accents, aspirational sophistication, {text_zone} for brand text, exclusive premium feel, 8K commercial quality",
+      "negative_prompt": "cheap, budget, casual, everyday, plastic, mass-market"
+    },
+    "tech_futuristic": {
+      "name": "Tech Futuristic",
+      "description": "Cutting-edge, innovative technology aesthetic",
+      "lighting": "dramatic with accent lighting",
+      "composition": "dynamic angles, floating effect",
+      "background": ["dark gradient", "abstract tech", "neon accents", "minimal dark"],
+      "props": ["minimal", "light trails", "reflective surfaces"],
+      "prompt_template": "Futuristic tech product photography of {product}, innovative cutting-edge aesthetic, dramatic lighting with {accent_color} accent glow, {background} backdrop, floating or dynamic angle, premium technology feel, sleek modern lines, {text_zone} for specs text, next-gen product reveal, 8K detail",
+      "negative_prompt": "outdated, retro, warm cozy, natural, organic, cluttered cables"
+    },
+    "artisan_craft": {
+      "name": "Artisan Craft",
+      "description": "Handmade, small-batch, artisanal product aesthetic",
+      "lighting": "natural_window",
+      "composition": "authentic, showing craft and process",
+      "background": ["workshop", "raw materials", "craft tools", "maker space"],
+      "props": ["raw ingredients", "tools of the trade", "work in progress", "maker hands"],
+      "prompt_template": "Artisan product photography of {product}, handcrafted small-batch aesthetic, natural workshop lighting, surrounded by {props} showing the craft process, authentic maker quality, visible texture and craftsmanship, {text_zone} for artisan story, genuine handmade feel, 8K detail",
+      "negative_prompt": "mass produced, factory, industrial, perfect, sterile, corporate"
+    },
+    "eco_sustainable": {
+      "name": "Eco Sustainable",
+      "description": "Environmentally conscious, sustainable product presentation",
+      "lighting": "natural daylight",
+      "composition": "product with nature, eco-conscious context",
+      "background": ["recycled materials", "natural textures", "green environment", "earth tones"],
+      "props": ["recyclable packaging", "plants", "natural materials", "eco certifications"],
+      "prompt_template": "Eco-friendly product photography of {product}, sustainable and environmentally conscious aesthetic, natural daylight, {background} setting with {props}, earth-friendly presentation, green and natural color palette, {text_zone} for eco messaging, authentic sustainability, 8K quality",
+      "negative_prompt": "plastic, synthetic, wasteful, polluting imagery, corporate greenwashing"
+    },
+    "pet_friendly": {
+      "name": "Pet Friendly",
+      "description": "Warm, loving pet product presentation",
+      "lighting": "natural_window or soft_studio",
+      "composition": "product with pet context, loving atmosphere",
+      "background": ["home setting", "cozy corner", "pet bed area", "outdoor park"],
+      "props": ["pet toys", "pet beds", "treats", "loving pet context"],
+      "prompt_template": "Pet product photography of {product}, warm and loving pet-friendly aesthetic, soft natural lighting, {background} setting, {props} creating pet-loving context, happy and healthy pet lifestyle, {text_zone} for product info, heartwarming pet care feel, 8K detail",
+      "negative_prompt": "sad pets, cages, clinical vet imagery, harsh, cold, unfriendly"
+    },
+    "kids_playful": {
+      "name": "Kids Playful",
+      "description": "Fun, colorful, safe kids product aesthetic",
+      "lighting": "bright and even",
+      "composition": "playful, dynamic, engaging",
+      "background": ["colorful", "playroom", "bright patterns", "fun textures"],
+      "props": ["toys", "colorful elements", "playful items", "safe materials"],
+      "prompt_template": "Playful kids product photography of {product}, fun and colorful child-friendly aesthetic, bright even lighting, {background} setting, {props} creating playful context, safe and engaging feel, vibrant colors, {text_zone} for fun text, joyful childhood energy, 8K quality",
+      "negative_prompt": "dark, scary, adult themes, sharp objects, dangerous, boring, dull colors"
+    },
+    "sports_dynamic": {
+      "name": "Sports Dynamic",
+      "description": "Energetic, action-oriented sports and fitness aesthetic",
+      "lighting": "dramatic with motion feel",
+      "composition": "dynamic angles, action energy",
+      "background": ["gym", "outdoor sports", "motion blur", "athletic context"],
+      "props": ["athletic equipment", "sweat droplets", "action context", "performance gear"],
+      "prompt_template": "Dynamic sports product photography of {product}, energetic athletic aesthetic, dramatic lighting with motion energy, {background} context, {props} suggesting peak performance, powerful and dynamic feel, {text_zone} for performance text, champion athlete energy, 8K action quality",
+      "negative_prompt": "static, lazy, sedentary, slow, weak, passive, boring"
+    }
+  },
+
+  "prompt_structure": {
+    "optimal_order": [
+      "prefix",
+      "product_description",
+      "scene_context",
+      "lighting",
+      "composition",
+      "style_aesthetic",
+      "technical_quality",
+      "text_zone"
+    ],
+    "prefix_options": [
+      "Professional product photography of",
+      "Commercial-quality photograph of",
+      "High-end product shot of",
+      "Editorial product image of",
+      "Lifestyle photograph featuring"
+    ],
+    "quality_tags": [
+      "8K detail",
+      "sharp focus",
+      "professional quality",
+      "commercial photography",
+      "high resolution",
+      "photorealistic"
+    ],
+    "text_zone_descriptions": {
+      "top-center": "clear negative space in upper third for headline text",
+      "bottom-left": "open area in bottom-left corner for price badge",
+      "bottom-right": "space in bottom-right for call-to-action",
+      "left-third": "negative space on left side for vertical text",
+      "right-third": "empty area on right side for text overlay"
+    }
+  },
+
+  "negative_prompts": {
+    "universal": [
+      "blurry",
+      "low quality",
+      "pixelated",
+      "watermark",
+      "text",
+      "logo",
+      "signature",
+      "out of focus"
+    ],
+    "ai_artifacts": [
+      "artificial looking",
+      "plastic skin",
+      "uncanny valley",
+      "distorted proportions",
+      "extra fingers",
+      "melting objects",
+      "impossible physics"
+    ],
+    "composition": [
+      "cluttered background",
+      "distracting elements",
+      "competing focal points",
+      "unbalanced composition",
+      "cut off product"
+    ],
+    "lighting": [
+      "harsh shadows",
+      "overexposed",
+      "underexposed",
+      "flat lighting",
+      "unflattering angles"
+    ],
+    "style_specific": {
+      "minimal": ["busy", "cluttered", "many props", "complex background"],
+      "lifestyle": ["sterile", "clinical", "cold", "artificial"],
+      "editorial": ["amateur", "boring", "flat", "generic"],
+      "authentic": ["too perfect", "plastic", "synthetic", "over-processed"],
+      "biophilic": ["artificial plants", "plastic", "synthetic", "indoor only"]
+    }
+  },
+
+  "category_guidelines": {
+    "food": {
+      "recommended_styles": ["lifestyle_warm", "authentic_imperfect"],
+      "lighting": ["natural_window", "golden_hour", "soft_studio"],
+      "props": ["ceramic dishes", "wooden cutting boards", "linen napkins", "fresh ingredients"],
+      "prompt_additions": ["appetizing", "steam visible", "fresh ingredients", "mouth-watering"],
+      "avoid": ["cold lighting", "plastic containers", "artificial colors"]
+    },
+    "beverages": {
+      "recommended_styles": ["minimal_clean", "lifestyle_warm"],
+      "lighting": ["backlit_glow", "soft_studio", "natural_window"],
+      "props": ["ice cubes", "condensation droplets", "coasters", "garnishes"],
+      "prompt_additions": ["refreshing", "condensation on glass", "crisp and cold", "ice-cold"],
+      "avoid": ["warm tones for cold drinks", "flat lighting"]
+    },
+    "beauty_cosmetics": {
+      "recommended_styles": ["minimal_clean", "editorial_magazine", "luxury_premium"],
+      "lighting": ["soft_studio", "dramatic_contrast"],
+      "props": ["marble surfaces", "gold accents", "flowers", "fabric swatches"],
+      "prompt_additions": ["luxurious", "premium feel", "elegant", "sophisticated"],
+      "avoid": ["harsh shadows on packaging", "cluttered backgrounds"]
+    },
+    "fashion_accessories": {
+      "recommended_styles": ["editorial_magazine", "lifestyle_warm", "luxury_premium"],
+      "lighting": ["dramatic_contrast", "natural_window"],
+      "props": ["styled outfits", "lifestyle context", "model hands"],
+      "prompt_additions": ["fashion-forward", "stylish", "on-trend", "aspirational"],
+      "avoid": ["static flat lays only", "boring backgrounds"]
+    },
+    "home_decor": {
+      "recommended_styles": ["biophilic_nature", "lifestyle_warm"],
+      "lighting": ["natural_window", "golden_hour"],
+      "props": ["room context", "plants", "books", "complementary decor"],
+      "prompt_additions": ["cozy interior", "styled room", "inviting space", "home aesthetic"],
+      "avoid": ["isolated product", "white void", "no context"]
+    },
+    "tech_electronics": {
+      "recommended_styles": ["minimal_clean", "tech_futuristic", "editorial_magazine"],
+      "lighting": ["soft_studio", "dramatic_contrast"],
+      "props": ["minimal", "clean desk setup", "lifestyle context"],
+      "prompt_additions": ["sleek", "modern", "premium technology", "clean lines"],
+      "avoid": ["cluttered cables", "busy backgrounds", "outdated aesthetics"]
+    },
+    "pharmacy": {
+      "recommended_styles": ["pharmacy_clinical", "pharmacy_wellness"],
+      "lighting": ["soft_studio", "natural_window"],
+      "props": ["clean surfaces", "natural ingredients for wellness", "minimal medical context"],
+      "prompt_additions": ["trustworthy", "professional", "clean", "healthcare"],
+      "avoid": ["scary medical imagery", "syringes", "blood", "intimidating"]
+    },
+    "wine_spirits": {
+      "recommended_styles": ["wine_elegant", "wine_casual", "luxury_premium"],
+      "lighting": ["dramatic_contrast", "golden_hour", "backlit_glow"],
+      "props": ["wine glasses", "grapes", "cheese", "corkscrew", "cellar context"],
+      "prompt_additions": ["sophisticated", "premium", "aged", "crafted"],
+      "avoid": ["cheap plastic cups", "bright harsh lighting", "casual beer aesthetic"]
+    },
+    "medical": {
+      "recommended_styles": ["medical_professional", "pharmacy_clinical"],
+      "lighting": ["soft_studio"],
+      "props": ["clean medical context", "professional setting", "minimal equipment"],
+      "prompt_additions": ["authoritative", "trustworthy", "precise", "clinical excellence"],
+      "avoid": ["scary imagery", "blood", "pain", "needles prominent", "unprofessional"]
+    },
+    "pets": {
+      "recommended_styles": ["pet_friendly", "lifestyle_warm"],
+      "lighting": ["natural_window", "soft_studio"],
+      "props": ["pet toys", "pet beds", "treats", "happy pet context"],
+      "prompt_additions": ["loving", "healthy", "happy", "pet-friendly"],
+      "avoid": ["sad pets", "cages", "clinical vet imagery", "harsh lighting"]
+    },
+    "kids_baby": {
+      "recommended_styles": ["kids_playful", "lifestyle_warm"],
+      "lighting": ["bright even", "natural_window"],
+      "props": ["toys", "colorful elements", "safe materials", "playful items"],
+      "prompt_additions": ["safe", "fun", "colorful", "engaging", "joyful"],
+      "avoid": ["dark themes", "sharp objects", "adult content", "scary imagery"]
+    },
+    "sports_fitness": {
+      "recommended_styles": ["sports_dynamic", "minimal_clean"],
+      "lighting": ["dramatic_contrast", "natural outdoor"],
+      "props": ["athletic equipment", "gym context", "performance gear"],
+      "prompt_additions": ["energetic", "powerful", "dynamic", "performance"],
+      "avoid": ["static", "lazy imagery", "sedentary context"]
+    },
+    "artisan_handmade": {
+      "recommended_styles": ["artisan_craft", "authentic_imperfect"],
+      "lighting": ["natural_window", "golden_hour"],
+      "props": ["raw materials", "tools", "workshop context", "maker hands"],
+      "prompt_additions": ["handcrafted", "small-batch", "artisanal", "genuine"],
+      "avoid": ["mass produced feel", "factory", "corporate", "too perfect"]
+    },
+    "eco_green": {
+      "recommended_styles": ["eco_sustainable", "biophilic_nature"],
+      "lighting": ["natural daylight"],
+      "props": ["recyclable materials", "plants", "natural textures", "earth elements"],
+      "prompt_additions": ["sustainable", "eco-friendly", "natural", "earth-conscious"],
+      "avoid": ["plastic", "synthetic", "wasteful imagery", "greenwashing"]
+    }
+  },
+
+  "instagram_specifications": {
+    "feed_post": {
+      "aspect_ratio": "4:5",
+      "dimensions": "1080x1350",
+      "safe_zones": {
+        "top": 150,
+        "bottom": 200,
+        "sides": 50
+      },
+      "notes": "4:5 is optimal for grid view, takes more screen space than square"
+    },
+    "story": {
+      "aspect_ratio": "9:16",
+      "dimensions": "1080x1920",
+      "safe_zones": {
+        "top": 250,
+        "bottom": 340,
+        "sides": 50
+      },
+      "notes": "Avoid placing critical elements in top 250px (profile) and bottom 340px (reply bar)"
+    },
+    "square": {
+      "aspect_ratio": "1:1",
+      "dimensions": "1080x1080",
+      "safe_zones": {
+        "all_sides": 50
+      },
+      "notes": "Classic format, works well for carousel posts"
+    },
+    "reel_cover": {
+      "aspect_ratio": "9:16",
+      "dimensions": "1080x1920",
+      "safe_zones": {
+        "center_focus": true,
+        "bottom": 400
+      },
+      "notes": "Cover image for Reels, key content in center"
+    }
+  }
+}

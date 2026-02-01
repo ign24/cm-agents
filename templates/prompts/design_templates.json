@@ -1,0 +1,151 @@
+{
+  "name": "design_templates",
+  "version": "2026.01",
+  "description": "Templates de prompts probados para generación de imágenes de productos",
+
+  "templates": {
+    "food_lifestyle": {
+      "category": "food",
+      "style": "lifestyle_warm",
+      "template": "Lifestyle food photography of {product}, {visual_description}, placed on {surface} in a cozy {setting}, warm natural window lighting creating soft shadows, {props} as styling elements, shallow depth of field with bokeh background, appetizing and inviting mood, steam or freshness visible, rule of thirds composition with clear {text_zone} for text overlay, warm color palette with {brand_colors} accents, authentic homemade feel, 8K detail, sharp focus on product",
+      "variables": {
+        "surface": ["rustic wooden table", "marble countertop", "ceramic plate", "cutting board"],
+        "setting": ["kitchen scene", "café ambiance", "dining table", "breakfast nook"],
+        "props": ["fresh herbs", "linen napkin", "vintage cutlery", "small plants"]
+      },
+      "negative": "cold lighting, plastic containers, artificial colors, cluttered, fast food aesthetic"
+    },
+
+    "food_minimal": {
+      "category": "food",
+      "style": "minimal_clean",
+      "template": "Minimalist food photography of {product}, {visual_description}, centered on {surface}, soft studio lighting with clean shadows, {background} background, professional composition with ample negative space in {text_zone}, {brand_colors} subtle accents, appetizing presentation, commercial quality, 8K sharp focus, elegant simplicity",
+      "variables": {
+        "surface": ["white ceramic plate", "slate board", "light wood", "neutral linen"],
+        "background": ["soft white", "light gray gradient", "cream", "pale sage"]
+      },
+      "negative": "busy background, many props, harsh shadows, cluttered, casual styling"
+    },
+
+    "beverage_refreshing": {
+      "category": "beverages",
+      "style": "lifestyle_warm",
+      "template": "Professional beverage photography of {product}, {visual_description}, condensation droplets visible on surface, {ice_style}, backlit creating rim glow and transparency, placed on {surface} with {props}, refreshing and crisp mood, shallow depth of field, clear {text_zone} for overlay, {brand_colors} color harmony, commercial quality, 8K detail",
+      "variables": {
+        "ice_style": ["ice cubes visible", "frost on glass", "chilled appearance"],
+        "surface": ["wet stone", "wooden bar top", "marble slab", "glass surface"],
+        "props": ["citrus garnish", "mint leaves", "coaster", "bar accessories"]
+      },
+      "negative": "warm tones for cold drink, flat lighting, dry appearance, no condensation"
+    },
+
+    "product_minimal": {
+      "category": "general",
+      "style": "minimal_clean",
+      "template": "Professional product photography of {product}, {visual_description}, centered on {background} background, soft studio lighting with subtle shadows at 30-degree angle, minimalist composition showing product dimension and texture, ample negative space in {text_zone} for text, {brand_colors} color accents in props, sharp focus throughout, commercial e-commerce quality, 8K detail, photorealistic",
+      "variables": {
+        "background": ["pure white (#FFFFFF)", "soft gray gradient", "light cream", "pale neutral"]
+      },
+      "negative": "cluttered, busy background, harsh shadows, distracting elements, amateur lighting"
+    },
+
+    "product_editorial": {
+      "category": "general",
+      "style": "editorial_magazine",
+      "template": "Editorial product photography of {product}, {visual_description}, dramatic {lighting} lighting creating bold shadows, {composition} composition, {background} backdrop, fashion magazine aesthetic, strong visual impact, bold negative space on {text_zone} for headline text, {brand_colors} as accent elements, premium luxury feel, high contrast, 8K commercial quality",
+      "variables": {
+        "lighting": ["dramatic side", "chiaroscuro", "high contrast studio"],
+        "composition": ["dynamic diagonal", "asymmetric", "bold off-center"],
+        "background": ["solid color", "textured wall", "gradient", "artistic backdrop"]
+      },
+      "negative": "flat lighting, centered boring composition, amateur, soft shadows, generic"
+    },
+
+    "product_authentic": {
+      "category": "general",
+      "style": "authentic_imperfect",
+      "template": "Authentic product photography of {product}, {visual_description}, placed on {surface} with natural textures, soft window daylight with gentle natural shadows, {props} creating artisanal context, subtle imperfections that feel real and tactile, warm earthy color palette with {brand_colors}, handcrafted aesthetic, clear {text_zone} for text, organic and genuine mood, 8K detail with natural film-like quality",
+      "variables": {
+        "surface": ["worn wood", "linen fabric", "handmade ceramic", "natural stone"],
+        "props": ["handcrafted items", "dried flowers", "natural materials", "vintage elements"]
+      },
+      "negative": "overly perfect, artificial, plastic, synthetic, sterile, over-processed, too polished"
+    },
+
+    "product_biophilic": {
+      "category": "general",
+      "style": "biophilic_nature",
+      "template": "Biophilic product photography of {product}, {visual_description}, surrounded by {natural_elements}, natural golden hour or window lighting, green plants and organic materials creating nature-integrated composition, fresh and alive feeling, sustainable aesthetic, {text_zone} for text overlay, {brand_colors} complementing natural greens, earthy color palette, 8K detail, authentic outdoor or greenhouse feel",
+      "variables": {
+        "natural_elements": ["live potted plants", "fresh leaves and flowers", "moss and stones", "botanical garden setting"]
+      },
+      "negative": "artificial plants, plastic, synthetic materials, indoor sterile environment, fake nature"
+    },
+
+    "beauty_luxury": {
+      "category": "beauty_cosmetics",
+      "style": "editorial_magazine",
+      "template": "Luxury beauty product photography of {product}, {visual_description}, on {surface} with {props}, soft diffused studio lighting creating elegant highlights on packaging, premium feel with gold or metallic accents, sophisticated composition with {text_zone} for text, {brand_colors} complementing luxurious mood, high-end magazine aesthetic, 8K sharp detail on textures and finishes",
+      "variables": {
+        "surface": ["white marble", "reflective black", "rose gold metal", "silk fabric"],
+        "props": ["fresh flowers", "pearl accents", "gold accessories", "fabric swatches"]
+      },
+      "negative": "cheap looking, harsh shadows on packaging, cluttered, drugstore aesthetic"
+    },
+
+    "tech_modern": {
+      "category": "tech_electronics",
+      "style": "minimal_clean",
+      "template": "Modern tech product photography of {product}, {visual_description}, floating or placed on {surface}, clean studio lighting with subtle reflections, sleek minimalist composition showing product design details, {background} background with {text_zone} for text, {brand_colors} accent lighting or props, premium technology aesthetic, sharp focus on device details, 8K commercial quality",
+      "variables": {
+        "surface": ["matte black surface", "white desk", "gradient platform", "floating effect"],
+        "background": ["pure white", "dark gradient", "subtle gray", "tech blue accent"]
+      },
+      "negative": "cluttered cables, busy backgrounds, outdated aesthetics, amateur lighting"
+    }
+  },
+
+  "prompt_fragments": {
+    "lighting": {
+      "soft_studio": "soft studio lighting with even diffused illumination",
+      "golden_hour": "warm golden hour sunlight with long soft shadows",
+      "natural_window": "natural window light creating gentle directional shadows",
+      "dramatic": "dramatic high-contrast lighting with defined shadows",
+      "backlit": "backlit with rim lighting and ethereal glow"
+    },
+    "quality": {
+      "commercial": "commercial photography quality, 8K detail, sharp focus throughout",
+      "editorial": "editorial magazine quality, professional retouching, high resolution",
+      "authentic": "authentic aesthetic with natural film-like quality"
+    },
+    "composition": {
+      "rule_of_thirds": "rule of thirds composition with product at intersection",
+      "centered": "centered symmetric composition with balanced negative space",
+      "diagonal": "dynamic diagonal composition creating visual movement",
+      "asymmetric": "asymmetric composition with intentional visual tension"
+    },
+    "mood": {
+      "warm_inviting": "warm and inviting atmosphere, cozy feeling",
+      "fresh_clean": "fresh and clean mood, crisp aesthetic",
+      "premium_luxury": "premium luxury feel, sophisticated elegance",
+      "playful": "playful and energetic mood, vibrant feeling",
+      "authentic": "authentic and genuine mood, real and tactile"
+    },
+    "text_zones": {
+      "top_center": "clear negative space in upper third for headline text",
+      "bottom_left": "open area in bottom-left corner for price badge",
+      "left_third": "negative space on left side for vertical text",
+      "right_third": "empty area on right side for overlay"
+    }
+  },
+
+  "negative_prompt_sets": {
+    "universal": "blurry, low quality, pixelated, watermark, text, logo, out of focus, distorted",
+    "ai_artifacts": "artificial looking, plastic, uncanny valley, distorted proportions, melting objects",
+    "minimal_style": "busy, cluttered, many props, complex background, distracting elements",
+    "lifestyle_style": "sterile, clinical, cold, artificial, harsh lighting",
+    "editorial_style": "amateur, boring, flat, generic, soft shadows",
+    "authentic_style": "overly perfect, plastic, synthetic, over-processed, too polished",
+    "biophilic_style": "artificial plants, plastic, synthetic, indoor sterile"
+  }
+}

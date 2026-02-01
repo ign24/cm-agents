@@ -1,0 +1,48 @@
+{
+  "name": "text_overlay",
+  "version": "1.0",
+  "description": "Agrega overlays de texto (precio, título) a imágenes generadas usando Pillow",
+  "supported_formats": ["PNG", "JPEG", "JPG"],
+  "font_fallback": "Usa fuentes del sistema (Arial, Helvetica) si no hay fuentes personalizadas",
+  "text_elements": [
+    {
+      "type": "price_badge",
+      "description": "Badge con precio, esquina seleccionable, padding configurable",
+      "default_position": "bottom-left",
+      "default_bg_color": "#D32F2F",
+      "default_text_color": "#FFFFFF"
+    },
+    {
+      "type": "title",
+      "description": "Título del producto, centrado o esquina, opción de sombra",
+      "default_position": "top-center",
+      "default_color": "#FFFFFF",
+      "shadow_enabled": true
+    }
+  ],
+  "safe_zones": {
+    "feed_4_5": {
+      "top": 100,
+      "bottom": 150,
+      "left": 50,
+      "right": 50
+    },
+    "story_9_16": {
+      "top": 250,
+      "bottom": 340,
+      "left": 100,
+      "right": 100
+    }
+  },
+  "examples": [
+    {
+      "input": {
+        "image_path": "hamburguesa_v1.png",
+        "brand_config": "...",
+        "product_price": "$8.99",
+        "product_name": "Hamburguesa Clásica"
+      },
+      "output": "Imagen con badge de precio en bottom-left y título en top-center"
+    }
+  ]
+}
