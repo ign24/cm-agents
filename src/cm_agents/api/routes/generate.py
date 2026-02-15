@@ -104,7 +104,6 @@ async def execute_generation(
         # Initialize pipeline
         pipeline = GenerationPipeline(
             generator_model="gpt-image-1.5",
-            use_designer=True,
             design_style=None,  # Will auto-detect from brand/product
         )
 
@@ -129,7 +128,9 @@ async def execute_generation(
             try:
                 # Validate product slug (defense in depth)
                 if not validate_slug(item.product):
-                    logger.warning(f"Invalid product slug in plan item {item_id}: '{item.product}', skipping")
+                    logger.warning(
+                        f"Invalid product slug in plan item {item_id}: '{item.product}', skipping"
+                    )
                     plan.mark_failed(item_id, f"Invalid product slug: {item.product}")
                     if session_id:
                         await manager.send_progress(

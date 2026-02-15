@@ -1,4 +1,4 @@
-"""Pipeline orquestador - Conecta los 3 agentes."""
+"""Pipeline orquestador - Conecta CreativeEngine + Generator."""
 
 from datetime import datetime
 from pathlib import Path
@@ -6,50 +6,42 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
-from .agents.architect import PromptArchitectAgent
-from .agents.designer import DesignerAgent, DesignStyle
-from .agents.extractor import ExtractorAgent
+from .agents.creative_engine import CreativeEngine
 from .agents.generator import GeneratorAgent
 from .models.brand import Brand
 from .models.campaign_plan import CampaignPlan
 from .models.generation import GenerationPrompt, GenerationResult
 from .models.product import Product
+from .styles import build_visual_direction_from_style
 
 console = Console(force_terminal=True, legacy_windows=False)
 
 
 class GenerationPipeline:
-    """Pipeline completo que conecta los 3 agentes."""
+    """Pipeline completo que conecta CreativeEngine + Generator."""
 
     def __init__(
         self,
         generator_model: str = "gpt-image-1.5",
-        use_designer: bool = True,
-        design_style: DesignStyle | None = None,
+        design_style: str | None = None,
     ):
         """Inicializa el pipeline.
 
         Args:
             generator_model: Modelo de generación (default: gpt-image-1.5)
-            use_designer: Si usar DesignerAgent (default: True) o PromptArchitectAgent
-            design_style: Estilo de diseño (None = auto-detectar)
+            design_style: Estilo de diseño (key de knowledge base; None = auto)
         """
-        self.extractor = ExtractorAgent()
-        self.use_designer = use_designer
         self.design_style = design_style
 
-        if use_designer:
-            self.prompt_agent = DesignerAgent()
-        else:
-            self.prompt_agent = PromptArchitectAgent()
+        # Engine unificado (reemplaza Extractor + Designer)
+        self.engine = CreativeEngine()
 
         self.generator = GeneratorAgent(model=generator_model)
 
         console.print("[bold]Pipeline inicializado:[/bold]")
-        console.print(f"  - {self.extractor.name}: {self.extractor.description}")
-        console.print(f"  - {self.prompt_agent.name}: {self.prompt_agent.description}")
+        console.print(f"  - {self.engine.name}: {self.engine.description}")
         console.print(f"  - {self.generator.name}: {self.generator.description}")
-        if use_designer and design_style:
+        if design_style:
             console.print(f"  - Estilo: {design_style}")
 
     def run(
@@ -118,21 +110,29 @@ class GenerationPipeline:
         else:
             console.print("  [dim]Logo: No configurado[/dim]")
 
-        # 2. Analizar referencia(s) (Extractor)
-        console.print("\n[bold]2. Analizando referencia(s)...[/bold]")
-        if dual_mode:
-            reference_analysis = self.extractor.analyze_dual(reference_path, product_ref_path)
-        else:
-            reference_analysis = self.extractor.analyze(reference_path)
+        # 2. Construir prompts (CreativeEngine)
+        console.print("\n[bold]2. Construyendo prompts (CreativeEngine)...[/bold]")
 
-        # 3. Construir prompts (Designer/Architect)
-        agent_name = "Designer" if self.use_designer else "Architect"
-        console.print(f"\n[bold]3. Construyendo prompts ({agent_name})...[/bold]")
-        if not product.has_visual_description():
-            console.print(
-                "[yellow][!] El producto no tiene visual_description."
-                f" El {agent_name} va a inferir del nombre y descripcion.[/yellow]"
+        # Asegurar referencia de producto (necesaria para replica exacta)
+        product_reference = product_ref_path
+        if product_reference is None:
+            try:
+                product_reference = product.get_main_photo(product_dir)
+            except Exception:
+                product_reference = None
+        if product_reference is None or not Path(product_reference).exists():
+            raise FileNotFoundError(
+                "No se encontró referencia de producto. "
+                "Usá --product-ref (-p) o agregá fotos al producto en products/<brand>/<product>/photos/."
             )
+
+        visual_direction = ""
+        if self.design_style:
+            visual_direction = build_visual_direction_from_style(self.design_style)
+        if not include_text:
+            visual_direction = (
+                visual_direction + "\n" if visual_direction else ""
+            ) + "Do NOT add any text, prices, headlines, or typography."
 
         # Use price_override if provided (create modified product instance)
         product_for_prompt = product
@@ -143,18 +143,18 @@ class GenerationPipeline:
             product_for_prompt = copy.deepcopy(product)
             product_for_prompt.price = price_override
 
-        # Para cada tamaño, generar prompts
+        # Para cada tamaño, generar prompt
         all_prompts: list[GenerationPrompt] = []
         for size in target_sizes:
-            if self.use_designer:
-                prompts = self.prompt_agent.build_prompt(
-                    reference_analysis, brand, product_for_prompt, size, style=self.design_style
-                )
-            else:
-                prompts = self.prompt_agent.build_prompt(
-                    reference_analysis, brand, product_for_prompt, size
-                )
-            all_prompts.append(prompts)
+            gen_prompt = self.engine.create_single_prompt(
+                style_reference=reference_path,
+                product_reference=Path(product_reference),
+                brand=brand,
+                product=product_for_prompt,
+                target_size=size,
+                visual_direction=visual_direction,
+            )
+            all_prompts.append(gen_prompt)
 
         # 4. Generar imagenes (Generator)
         console.print("\n[bold]4. Generando imagenes...[/bold]")
@@ -193,7 +193,7 @@ class GenerationPipeline:
 
             # Generar variantes para este tamaño
             if num_variants > 1:
-                from ..services.variant_generator import VariantStrategy
+                from .services.variant_generator import VariantStrategy
 
                 variant_prompts = VariantStrategy.create_diverse_variants(base_prompt, num_variants)
             else:
@@ -224,81 +224,6 @@ class GenerationPipeline:
         console.print(
             Panel(
                 f"[bold green][OK] Pipeline completo![/bold green]\n\n"
-                f"Imagenes generadas: {len(results)}\n"
-                f"Directorio de salida: {output_dir}\n"
-                f"Costo total: ${total_cost:.4f}",
-                title="Resumen",
-                border_style="green",
-            )
-        )
-
-        return results
-
-    def run_batch(
-        self,
-        reference_paths: list[Path],
-        brand_dir: Path,
-        product_dir: Path,
-        target_size: str = "feed",
-        include_text: bool = True,
-    ) -> list[GenerationResult]:
-        """
-        Ejecuta el pipeline con múltiples referencias (una variante por referencia).
-
-        Args:
-            reference_paths: Lista de paths a referencias de Pinterest
-            brand_dir: Path al directorio de la marca
-            product_dir: Path al directorio del producto
-            target_size: Tamaño objetivo ("feed" o "story")
-            include_text: Si agregar overlays de texto
-
-        Returns:
-            Lista de GenerationResult (una por referencia)
-        """
-        console.print("\n")
-        console.print(
-            Panel(
-                f"[bold]>> Pipeline Batch[/bold]\n"
-                f"  Referencias: {len(reference_paths)}\n"
-                f"  Tamano: {target_size}\n"
-                f"  Text overlay: {'Si' if include_text else 'No'}",
-                title="Configuracion",
-                border_style="blue",
-            )
-        )
-
-        # Cargar configuración
-        brand = Brand.load(brand_dir)
-        product = Product.load(product_dir)
-
-        # Analizar todas las referencias
-        analyses = self.extractor.analyze_batch(reference_paths)
-
-        # Construir prompts
-        if self.use_designer:
-            prompts = self.prompt_agent.build_prompt_batch(
-                analyses, brand, product, target_size, style=self.design_style
-            )
-        else:
-            prompts = self.prompt_agent.build_prompts_batch(analyses, brand, product, target_size)
-
-        # Generar imágenes
-        timestamp = datetime.now().strftime("%Y-%m-%d")
-        output_dir = Path("outputs") / brand.name / timestamp
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        results = self.generator.generate_batch(prompts, brand, product, output_dir)
-
-        # Guardar metadatos (el texto ya viene integrado en la imagen generada)
-        for result in results:
-            result.save_metadata()
-
-        # Resumen
-        total_cost = sum(r.cost_usd for r in results)
-        console.print("\n")
-        console.print(
-            Panel(
-                f"[bold green][OK] Batch completo![/bold green]\n\n"
                 f"Imagenes generadas: {len(results)}\n"
                 f"Directorio de salida: {output_dir}\n"
                 f"Costo total: ${total_cost:.4f}",
@@ -913,16 +838,15 @@ class CampaignPipeline:
         campaign_plan: CampaignPlan | None = None,
         output_dir: Path | None = None,
         product_name: str | None = None,
-        price: str = "",
         size: str = "1024x1536",
         campaign_title: str | None = None,
     ) -> list[GenerationResult]:
         """
         Campaña por referencias: 1 producto + 1 escena + 1 fuente.
 
-        Flujo:
-        1. Genera fondo + producto en una sola llamada (replica exacta).
-        2. Por cada día: agrega texto (headline/copy del día) con referencia de fuente.
+        Flujo (por cada día):
+        1. Genera escena + producto con un ángulo/composición distinto (replica exacta).
+        2. Agrega texto (headline/copy del día) con referencia de fuente.
 
         Args:
             product_ref: Imagen del producto (replica exacta).
@@ -932,7 +856,6 @@ class CampaignPipeline:
             campaign_plan: Plan con N días (None = 3 días por defecto: teaser, main_offer, last_chance).
             output_dir: Directorio de salida.
             product_name: Nombre del producto (default: stem de product_ref).
-            price: Precio a mostrar (default: vacío).
             size: Tamaño de imagen (ej. 1024x1536).
             campaign_title: Título de campaña para headlines (ej. "BLACK FRIDAY"). Si no se pasa y el plan es por defecto, se usa "PROMO".
 
@@ -940,9 +863,16 @@ class CampaignPipeline:
             Lista de GenerationResult (una por día).
         """
         from .models.brand import Brand
-        from .models.campaign_style import CampaignStyleGuide, get_preset
+        from .models.campaign_style import get_preset
         from .models.product import Product
         from .services.direct_generator import get_direct_generator
+
+        # Variaciones automáticas de ángulo del producto (se ciclan con módulo).
+        product_angles = [
+            "front-facing, centered, eye-level",
+            "dynamic 3/4 angle from the left, slight tilt",
+            "slightly elevated angle, looking down at the product",
+        ]
 
         console.print("\n")
         console.print(
@@ -951,7 +881,7 @@ class CampaignPipeline:
                 f"Producto: {product_ref.name}\n"
                 f"Escena: {scene_ref.name}\n"
                 f"Fuente: {font_ref.name}\n"
-                f"Modo: fondo + producto (una llamada) + texto por día",
+                f"Modo: escena + producto (ángulo por día) + texto por día",
                 title="Reference-driven campaign",
                 border_style="magenta",
             )
@@ -978,7 +908,7 @@ class CampaignPipeline:
         style_guide = campaign_plan.style_guide or get_preset("promo")
         product = Product(
             name=product_name or product_ref.stem,
-            price=price or "",
+            price="",
         )
 
         if output_dir is None:
@@ -989,54 +919,51 @@ class CampaignPipeline:
 
         generator = get_direct_generator(model="gpt-image-1.5")
 
-        # 1. Generar escena + producto UNA vez (replica)
-        console.print("\n[bold]1. Generando escena + producto (una llamada)...[/bold]")
-        base_path = output_dir / f"{product.name}_base.png"
-        base_path, cost_base = generator.generate_scene_with_product(
-            product_ref=product_ref,
-            scene_ref=scene_ref,
-            output_path=base_path,
-            size=size,
-            style_guide=style_guide,
-        )
-        total_cost = cost_base
-
-        # 2. Por cada día: agregar texto (headline/copy) con font_ref
-        console.print("\n[bold]2. Agregando texto por día...[/bold]")
+        console.print("\n[bold]Generando variaciones por día...[/bold]")
         results: list[GenerationResult] = []
         total_cost = 0.0
 
         for i, day_plan in enumerate(campaign_plan.days):
             headline = self._get_headline_for_theme(day_plan.theme, campaign_plan.name)
             subheadline = self._get_subheadline_for_theme(day_plan.theme, day_plan.urgency_level)
-            display_price = day_plan.price_override or product.price
+            angle_hint = product_angles[i % len(product_angles)]
 
-            product_for_day = Product(name=product.name, price=display_price)
+            base_path = output_dir / f"{product.name}_day{day_plan.day}_base.png"
             final_path = output_dir / f"{product.name}_day{day_plan.day}.png"
 
             try:
-                final_path, cost = generator.add_text_overlay(
+                base_path, cost_base = generator.generate_scene_with_product(
+                    product_ref=product_ref,
+                    scene_ref=scene_ref,
+                    output_path=base_path,
+                    size=size,
+                    style_guide=style_guide,
+                    angle_hint=angle_hint,
+                )
+
+                final_path, cost_overlay = generator.add_text_overlay(
                     base_image=base_path,
                     style_guide=style_guide,
-                    product=product_for_day,
+                    product=product,
                     headline=headline,
                     subheadline=subheadline,
-                    show_price=bool(display_price),
+                    show_price=False,
                     output_path=final_path,
                     font_ref=font_ref,
                 )
-                total_cost += cost
+
+                total_cost += cost_base + cost_overlay
                 import uuid
 
                 results.append(
                     GenerationResult(
                         id=str(uuid.uuid4())[:8],
                         image_path=final_path,
-                        prompt_used=f"refs: {product_ref.name} + {scene_ref.name} + {font_ref.name}",
+                        prompt_used=f"refs: {product_ref.name} + {scene_ref.name} + {font_ref.name} | angle: {angle_hint}",
                         brand_name=brand.name,
                         product_name=product.name,
                         variant_number=day_plan.day,
-                        cost_usd=cost,
+                        cost_usd=cost_base + cost_overlay,
                     )
                 )
             except Exception as e:

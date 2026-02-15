@@ -101,49 +101,6 @@ class TestStrategistAgentUnit:
         assert plan.intent.objective == "promocionar"
 
 
-class TestExtractorAgentUnit:
-    """Unit tests for ExtractorAgent."""
-
-    def test_extractor_initializes(self, mock_anthropic):
-        """ExtractorAgent initializes without errors."""
-        from cm_agents.agents.extractor import ExtractorAgent
-
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}):
-            agent = ExtractorAgent()
-            assert agent.name == "Extractor"  # Real name from implementation
-
-    def test_extractor_validates_env(self, mock_anthropic):
-        """ExtractorAgent checks for required API key."""
-        from cm_agents.agents.extractor import ExtractorAgent
-
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}):
-            agent = ExtractorAgent()
-            # Should not raise
-            assert agent is not None
-
-
-class TestDesignerAgentUnit:
-    """Unit tests for DesignerAgent."""
-
-    def test_designer_initializes(self, mock_anthropic):
-        """DesignerAgent initializes with knowledge base."""
-        from cm_agents.agents.designer import DesignerAgent
-
-        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"}):
-            agent = DesignerAgent()  # No knowledge_dir param - uses fixed path
-            assert agent.name == "Designer"  # Real name from implementation
-
-    def test_designer_loads_styles_dynamically(self):
-        """DesignerAgent loads design styles dynamically from knowledge base."""
-        from cm_agents.agents.designer import get_available_styles
-
-        # get_available_styles reads from fixed path
-        styles = get_available_styles()
-        # Should return at least the fallback styles
-        assert len(styles) > 0
-        assert isinstance(styles, list)
-
-
 class TestGeneratorAgentUnit:
     """Unit tests for GeneratorAgent."""
 

@@ -1295,10 +1295,9 @@ Cuando el usuario pide buscar en Pinterest:
    - Recibís resultados con URLs y metadata
 4. **Agregás** las URLs a los items del plan (`item.reference_urls`)
 5. **Cuando se aprueba el plan**, el GenerationPipeline:
-   - Busca las imágenes descargadas en `references/` (más recientes primero)
-   - ExtractorAgent.analyze() → Analiza las referencias descargadas
-   - DesignerAgent.build_prompt() → Construye prompts basados en el análisis
-   - GeneratorAgent.generate_with_image_refs() → Genera imágenes finales
+    - Busca las imágenes descargadas en `references/` (más recientes primero)
+    - CreativeEngine.create_single_prompt() → Genera el prompt (estilo + producto)
+    - GeneratorAgent.generate_with_image_refs() → Genera imágenes finales
 
 **Flujo Completo de Orquestación:**
 ```
@@ -1317,9 +1316,8 @@ Usuario aprueba → BUILD Mode
 GenerationPipeline.execute_generation():
   1. Lee item.reference_urls
   2. Busca archivos descargados en references/ (más recientes)
-  3. ExtractorAgent.analyze(reference_path) → ReferenceAnalysis
-  4. DesignerAgent.build_prompt(analysis, brand, product) → GenerationPrompt
-  5. GeneratorAgent.generate_with_image_refs(prompt, [ref_path, product_path, logo]) → Imagen final
+  3. CreativeEngine.create_single_prompt(style_ref, product_ref, brand, product) → GenerationPrompt
+  4. GeneratorAgent.generate_with_image_refs(prompt, [style_ref, product_ref, logo]) → Imagen final
 ```
 
 **IMPORTANTE - Tu Rol como Orquestador:**

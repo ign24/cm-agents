@@ -2,59 +2,75 @@
 
 Sistema de orquestación de agentes AI para automatizar la creación de contenido visual para redes sociales. Genera imágenes profesionales de productos con calidad de diseño de agencia, tomando inspiración de Pinterest y aplicando best practices de diseño 2026.
 
-**Versión:** 2.1.0 | **Tests:** 116 pasando | **Seguridad:** Validación + Rate limiting
+**Versión:** 0.1.0 | **Tests:** 87 pasando | **Seguridad:** Validación + Rate limiting
 
-> **Estado:** MVP en desarrollo activo. No recomendado para producción sin hardening adicional (ver [REVIEW_SENIOR_ENGINEER.md](REVIEW_SENIOR_ENGINEER.md) para detalles).
+> **Estado:** MVP en desarrollo activo. No recomendado para producción sin hardening adicional.
 
-## 🎯 Qué hace
+## Qué hace
 
 1. **Chat Inteligente**: Habla en lenguaje natural para crear planes de contenido
-2. **Analiza** imágenes de referencia de Pinterest (estilo visual)
-3. **Extrae** detalles exactos de productos reales (para réplica perfecta)
-4. **Diseña** prompts profesionales aplicando tendencias 2026 y tu identidad de marca
-5. **Genera** imágenes con producto, texto integrado, logo y estilo de la referencia
+2. **Analiza** imágenes de referencia de Pinterest (estilo + producto) en una sola llamada
+3. **Genera prompts** profesionales aplicando tendencias 2026 y tu identidad de marca
+4. **Genera imágenes** con producto (réplica exacta), texto integrado, logo y estilo de la referencia
 
 **Resultado**: Imágenes listas para Instagram con consistencia de marca, perfectas para campañas publicitarias.
 
-### ✨ Nuevo en v2.1
+### Incluye
 
-- ✅ **API REST + WebSocket** funcional con chat en tiempo real
-- ✅ **Frontend Next.js 16** con UI moderna y responsive
-- ✅ **StrategistAgent conectado** - Crea planes desde lenguaje natural
-- ✅ **116 tests automatizados** - API, seguridad, y lógica de negocio
-- ✅ **Seguridad básica** - Validación de inputs, rate limiting, CORS
-- ✅ **Type-safe** - TypeScript + Pydantic con validaciones
+- **API REST + WebSocket** funcional con chat en tiempo real
+- **Frontend Next.js 16** con UI moderna y responsive
+- **StrategistAgent** - Crea planes de contenido desde lenguaje natural
+- **87 tests automatizados** - API, seguridad, y lógica de negocio
+- **Seguridad básica** - Validación de inputs, rate limiting, CORS
+- **Type-safe** - TypeScript + Pydantic con validaciones
 
-## 🏗️ Arquitectura
+## Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           GENERATION PIPELINE                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│  │  EXTRACTOR   │───▶│   DESIGNER   │───▶│  GENERATOR   │                  │
-│  │              │    │              │    │              │                  │
-│  │ Claude Vision│    │ Claude 4.5   │    │ GPT-Image-1  │                  │
-│  │              │    │              │    │              │                  │
-│  │ • Estilo     │    │ • Best       │    │ • Genera     │                  │
-│  │ • Layout     │    │   Practices  │    │   imagen     │                  │
-│  │ • Colores    │    │   2026       │    │   final      │                  │
-│  │ • Producto   │    │ • Prompts    │    │ • Texto      │                  │
-│  │   (réplica)  │    │   optimizados│    │   integrado  │                  │
-│  └──────────────┘    └──────────────┘    └──────────────┘                  │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────┐           │
-│  │                    KNOWLEDGE BASE                           │           │
-│  │  knowledge/design_2026.json                                 │           │
-│  │  • 17 estilos de diseño (dinámicos)                        │           │
-│  │  • Guidelines por categoría (food, pharmacy, wine...)      │           │
-│  └─────────────────────────────────────────────────────────────┘           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    A[Style ref + Product ref + Brand/Product] --> B[CreativeEngine\nClaude Sonnet 4 Vision\n1 llamada: analiza + diseña prompt]
+    B --> C[GeneratorAgent\nGPT-Image-1.5 Responses API\nrender final con referencias]
+    C --> D[Imagen final]
+    KB[(knowledge/design_2026.json\n17 estilos + guidelines)] --> B
 ```
 
-## 🚀 Instalación
+### Flujo campaign-refs (reference-driven)
+
+```mermaid
+flowchart TD
+    A[Producto ref + Escena ref + Fuente ref] --> B{Por cada dia}
+    B --> C[generate_scene_with_product\nbase con angulo distinto]
+    C --> D[add_text_overlay\nheadline + subheadline]
+    D --> E[Imagen final del dia]
+```
+
+## Ejemplos visuales
+
+<p align="center">
+  <img src="examples/mercedes_day1_base.png" alt="Mercedes day1 base" width="280" />
+  <img src="examples/mercedes_day1.png" alt="Mercedes day1 final" width="280" />
+  <img src="examples/mercedes_day3_base.png" alt="Mercedes day3 base" width="280" />
+</p>
+
+<p align="center">
+  <img src="examples/zapas_day1_base.png" alt="Zapas day1 base" width="280" />
+  <img src="examples/zapas_day1.png" alt="Zapas day1 final" width="280" />
+  <img src="examples/zapas_day2_base.png" alt="Zapas day2 base" width="280" />
+</p>
+
+<p align="center">
+  <img src="examples/zapas_day2.png" alt="Zapas day2 final" width="280" />
+  <img src="examples/zapas_day3_base.png" alt="Zapas day3 base" width="280" />
+  <img src="examples/zapas_day3.png" alt="Zapas day3 final" width="280" />
+</p>
+
+<p align="center">
+  <img src="examples/producto_base.png" alt="Producto base" width="280" />
+  <img src="examples/producto_day1_base.png" alt="Producto day1 base" width="280" />
+  <img src="examples/producto_day3_base.png" alt="Producto day3 base" width="280" />
+</p>
+
+## Instalación
 
 ### Backend
 
@@ -62,7 +78,7 @@ Sistema de orquestación de agentes AI para automatizar la creación de contenid
 # 1. Clonar e instalar
 git clone <repo>
 cd cm-agents
-pip install -e .
+uv pip install -e ".[dev]"
 
 # 2. Configurar API keys
 cp .env.example .env
@@ -90,7 +106,7 @@ bun dev  # http://localhost:3000
 
 ```bash
 # Backend
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Frontend
 cd ui
@@ -98,7 +114,7 @@ bun run lint
 bun run build
 ```
 
-## 📝 Uso
+## Uso
 
 ### Generación básica
 
@@ -140,15 +156,37 @@ cm campaign-list resto-mario
 
 # Ver detalles de campaña
 cm campaign-show resto-mario promo-verano-2026
+
+# Ejecutar campaña con inpainting
+cm campaign-inpaint resto-mario promo-verano-2026
 ```
 
 ### Campaña por referencias (3 referencias)
 
-Flujo con **1 producto + 1 escena + 1 fuente**: genera fondo y producto en **una sola llamada** (replica exacta) y agrega texto por día usando la referencia de tipografía. Por defecto 3 días (teaser, main_offer, last_chance).
+Flujo con **1 producto + 1 escena + 1 fuente**: genera una imagen por día con variación automática de ángulo del producto (réplica exacta) y agrega texto por día usando la referencia de tipografía. Por defecto 3 días (teaser, main_offer, last_chance).
 
 ```bash
-cm campaign-refs resto-mario --product foto-producto.jpg --scene escena-fondo.png --font tipografia-muestra.png
-cm campaign-refs resto-mario -p producto.png -s escena.png -f fuente.png --days 3 --price "$2.75" --output outputs/mi-campana
+cm campaign-refs resto-mario -p foto-producto.jpg -s escena-fondo.png -f tipografia-muestra.png
+cm campaign-refs resto-mario -p producto.png -s escena.png -f fuente.png --days 3 --output outputs/mi-campana
+```
+
+### Planes de Contenido (StrategistAgent)
+
+```bash
+# Crear plan desde lenguaje natural
+cm plan-create resto-mario "3 posts promocionales para hamburguesas 2x1"
+
+# Listar planes
+cm plan-list
+
+# Ver detalles de un plan
+cm plan-show <plan_id>
+
+# Aprobar plan para ejecución
+cm plan-approve <plan_id>
+
+# Ejecutar generación de un plan aprobado
+cm plan-execute <plan_id>
 ```
 
 ### Estilos disponibles
@@ -168,12 +206,15 @@ cm styles food
 ### Otros comandos
 
 ```bash
-cm product-list resto-mario # Listar productos
-cm status                   # Estado del sistema
-cm estimate                 # Estimar costos
+cm product-list resto-mario     # Listar productos
+cm status                       # Estado del sistema
+cm estimate                     # Estimar costos
+cm pinterest-search <query>     # Buscar imágenes en Pinterest (MCP)
+cm mcp-tools <server>           # Listar tools de un servidor MCP
+cm serve [--reload]             # Iniciar API server
 ```
 
-## 📁 Estructura
+## Estructura
 
 ```
 cm-agents/
@@ -200,14 +241,18 @@ cm-agents/
 │   ├── brand_template.json
 │   └── campaign_template.json
 ├── outputs/                     # Imágenes generadas (sin campaña)
+├── ui/                          # Frontend Next.js 16
 └── src/cm_agents/
-    ├── agents/                  # Los 3 agentes
+    ├── agents/                  # CreativeEngine, Generator, Strategist
     ├── models/                  # Modelos (Brand, Product, Campaign)
+    ├── services/                # DirectGenerator, Inpainting, MCP
+    ├── api/                     # REST + WebSocket server
     ├── pipeline.py              # Orquestación
+    ├── styles.py                # Registro de estilos (knowledge base)
     └── cli.py                   # CLI
 ```
 
-## ⚙️ Configuración
+## Configuración
 
 ### brand.json (Identidad de Marca Completa)
 ```json
@@ -268,7 +313,7 @@ cm-agents/
 }
 ```
 
-## 🎨 Agregar Estilos
+## Agregar Estilos
 
 Los estilos son **dinámicos** - solo editar `knowledge/design_2026.json`:
 
@@ -288,23 +333,23 @@ Los estilos son **dinámicos** - solo editar `knowledge/design_2026.json`:
 
 No se requiere modificar código.
 
-## 💰 Costos
+## Costos
 
 | Componente | Costo/imagen |
 |------------|--------------|
-| Extractor (Claude) | ~$0.003 |
-| Designer (Claude) | ~$0.005 |
-| Generator (GPT-Image) | ~$0.04 |
-| **Total** | **~$0.05** |
+| CreativeEngine (Claude Sonnet 4) | ~$0.005 |
+| Generator (GPT-Image-1.5) | ~$0.040 |
+| **Total (single)** | **~$0.05** |
 
-## 📔 Documentación
+Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 llamadas al Generator por día (base + overlay).
+
+## Documentación
 
 - **[AGENTS.md](AGENTS.md)** - Documentación técnica detallada del sistema de agentes
-- **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - Contexto completo del proyecto y decisiones
 - **[ui/AGENTS.md](ui/AGENTS.md)** - Guía específica del frontend
 - **[tests/](tests/)** - Suite de tests con ejemplos de uso
 
-## 🚀 Features
+## Features
 
 ### Core
 - **Multi-marca**: Gestiona múltiples negocios con identidades visuales independientes
@@ -315,7 +360,7 @@ No se requiere modificar código.
 
 ### API & UI
 - **REST API + WebSocket**: Comunicación en tiempo real con el frontend
-- **Chat inteligente**: Crea planes de contenido desde lenguaje natural
+- **Chat inteligente**: Crea planes de contenido desde lenguaje natural (StrategistAgent)
 - **UI moderna**: Next.js 16 con Tailwind 4 y shadcn/ui
 - **Estado persistente**: Conversaciones y preferencias guardadas
 - **Auto-reconexión**: WebSocket robusto con manejo de desconexiones
@@ -325,12 +370,12 @@ No se requiere modificar código.
 - **Rate limiting**: 120 requests/minuto
 - **API Key opcional**: Protección con header X-API-Key
 - **CORS configurable**: Estricto en producción
-- **116 tests**: Cobertura de API, seguridad y lógica
+- **87 tests**: Cobertura de API, seguridad y lógica
 
-## 📄 Licencia
+## Licencia
 
 MIT License
 
 ---
 
-**CM Agents** - Automatización de diseño para Community Managers con AI 🚀
+**CM Agents** - Automatización de diseño para Community Managers con AI

@@ -213,6 +213,7 @@ Generate a single promotional image following these requirements."""
         output_path: Path | None = None,
         size: str = "1024x1536",
         style_guide: CampaignStyleGuide | None = None,
+        angle_hint: str = "",
     ) -> tuple[Path, float]:
         """Genera fondo + producto en una sola llamada (replica exacta del producto).
 
@@ -230,14 +231,25 @@ Generate a single promotional image following these requirements."""
         Returns:
             Tuple de (path a imagen generada, costo en USD)
         """
-        console.print("\n[blue][DirectGen][/blue] Generando escena + producto (una sola llamada)...")
+        console.print(
+            "\n[blue][DirectGen][/blue] Generando escena + producto (una sola llamada)..."
+        )
         console.print(f"[dim]   Producto: {product_ref.name}[/dim]")
         console.print(f"[dim]   Escena: {scene_ref.name}[/dim]")
+        if angle_hint:
+            console.print(f"[dim]   Angulo: {angle_hint}[/dim]")
 
         style_instructions = ""
         if style_guide:
             style_instructions = f"""
 STYLE NOTES (optional): {style_guide.base_style}, {style_guide.lighting_style}.
+"""
+
+        angle_instructions = ""
+        if angle_hint:
+            angle_instructions = f"""
+PRODUCT ANGLE & COMPOSITION: {angle_hint}
+Place the product according to this direction to create variation across a campaign.
 """
 
         main_prompt = f"""You are a professional advertising photographer and art director.
@@ -246,7 +258,7 @@ TASK: Create ONE image that combines:
 1. The SCENE REFERENCE as the background, environment, lighting, and mood. Use that image as the exact visual reference for the setting.
 2. An EXACT REPLICA of the PRODUCT from the product reference. The product must be a precise replica: same shape, colors, labels, brand, packaging, every detail. Place it naturally in the scene.
 
-{style_instructions}
+{style_instructions}{angle_instructions}
 
 CRITICAL REQUIREMENTS:
 1. PRODUCT: The product must be an exact replica of the product reference image - do not modify, reinterpret, or stylize it. Same shape, colors, labels, brand, every detail.
@@ -259,10 +271,22 @@ Generate a single promotional image following these requirements."""
 
         content_parts = [
             {"type": "input_text", "text": main_prompt},
-            {"type": "input_text", "text": "\n--- PRODUCT REFERENCE (exact replica of this product) ---"},
-            {"type": "input_image", "image_url": f"data:{get_media_type(product_ref)};base64,{load_image_as_base64(product_ref)}"},
-            {"type": "input_text", "text": "\n--- SCENE REFERENCE (use this as background, lighting, mood) ---"},
-            {"type": "input_image", "image_url": f"data:{get_media_type(scene_ref)};base64,{load_image_as_base64(scene_ref)}"},
+            {
+                "type": "input_text",
+                "text": "\n--- PRODUCT REFERENCE (exact replica of this product) ---",
+            },
+            {
+                "type": "input_image",
+                "image_url": f"data:{get_media_type(product_ref)};base64,{load_image_as_base64(product_ref)}",
+            },
+            {
+                "type": "input_text",
+                "text": "\n--- SCENE REFERENCE (use this as background, lighting, mood) ---",
+            },
+            {
+                "type": "input_image",
+                "image_url": f"data:{get_media_type(scene_ref)};base64,{load_image_as_base64(scene_ref)}",
+            },
         ]
 
         console.print("[dim]   Generando con Responses API...[/dim]")
@@ -307,7 +331,7 @@ Generate a single promotional image following these requirements."""
         product: Product,
         headline: str,
         subheadline: str | None = None,
-        show_price: bool = True,
+        show_price: bool = False,
         output_path: Path | None = None,
         font_ref: Path | None = None,
     ) -> tuple[Path, float]:
@@ -322,7 +346,7 @@ Generate a single promotional image following these requirements."""
             product: Datos del producto (nombre, precio)
             headline: Texto principal (ej: "BLACK FRIDAY")
             subheadline: Texto secundario opcional
-            show_price: Si mostrar el precio
+            show_price: Si mostrar el precio (actualmente no se agrega precio en este flujo)
             output_path: Dónde guardar la imagen final
             font_ref: Imagen de referencia de tipografía (opcional)
 
@@ -336,16 +360,7 @@ Generate a single promotional image following these requirements."""
             console.print(f"[dim]   Fuente ref: {font_ref.name}[/dim]")
 
         # Construir prompt para overlay de texto
-        price_instruction = ""
-        if show_price and product.price:
-            price_instruction = f"""
-PRICE BADGE:
-- Display the price EXACTLY as written: "{product.price}". Do NOT change, abbreviate, or reinterpret it (e.g. if price is $2.75 do not show .500 or 500).
-- Badge style: {style_guide.price_badge.shape} shape
-- Badge color: {style_guide.price_badge.bg_color} background, {style_guide.price_badge.text_color} text
-- Position: {style_guide.price_badge.position}
-- Make the price prominent and eye-catching"""
-
+        # Nota: este flujo no agrega precio; show_price se mantiene solo por compatibilidad.
         typography_guide = f"""
 TYPOGRAPHY REQUIREMENTS:
 - Headline font style: {style_guide.typography.headline_style} (bold, impactful)
@@ -357,7 +372,7 @@ TYPOGRAPHY REQUIREMENTS:
         font_ref_instruction = ""
         if font_ref and font_ref.exists():
             font_ref_instruction = """
-REFERENCE IMAGE (SOURCE): Use it ONLY for style. Replicate the typography look (font, weight, character) from that image. Do NOT copy the words shown in the reference. Write ONLY the exact texts we give you below (headline, subheadline, price). Same visual style as the reference — our content."""
+REFERENCE IMAGE (SOURCE): Use it ONLY for style. Replicate the typography look (font, weight, character) from that image. Do NOT copy the words shown in the reference. Write ONLY the exact texts we give you below (headline, subheadline). Same visual style as the reference — our content."""
 
         subheadline_instruction = ""
         if subheadline:
@@ -371,16 +386,16 @@ SUBHEADLINE (exact text, in the reference style):
 
 RULES:
 1. SOURCE REFERENCE (the reference image): Take the typography STYLE from it — font, weight, look. Replicate that style. Do NOT copy the words written in that image.
-2. REPLICA: The letters must look like the reference (same font, same weight). The words must be exactly what we specify below — our headline, our subheadline, our price.
+2. REPLICA: The letters must look like the reference (same font, same weight). The words must be exactly what we specify below — our headline and our subheadline.
 3. Write ONLY these exact texts (nothing else):
 
 HEADLINE (once only): "{headline}"
 {subheadline_instruction}
-{price_instruction}
 
 CRITICAL:
 - Style from reference image; content from us. No extra text, no "SUPER Descuento", no repeated headline, no text from the reference image.
-- Price EXACTLY as given (e.g. "$2.75" not ".75" or "500"). Do not modify product or background. High contrast, readable."""
+- Do NOT add any price, price badge, currency, or monetary amount to the image.
+- Do not modify product or background. High contrast, readable."""
 
         content_parts = [
             {"type": "input_text", "text": edit_prompt},
@@ -391,7 +406,10 @@ CRITICAL:
             font_b64 = load_image_as_base64(font_ref)
             font_media = get_media_type(font_ref)
             content_parts.append(
-                {"type": "input_text", "text": "\n--- SOURCE REFERENCE (fuente.jpg): use this image ONLY for typography style; replicate that style but write our exact headline, subheadline, price ---"}
+                {
+                    "type": "input_text",
+                    "text": "\n--- SOURCE REFERENCE (fuente.jpg): use this image ONLY for typography style; replicate that style but write our exact headline and subheadline ---",
+                }
             )
             content_parts.append(
                 {"type": "input_image", "image_url": f"data:{font_media};base64,{font_b64}"}
@@ -401,7 +419,10 @@ CRITICAL:
         base_b64 = load_image_as_base64(base_image)
         base_media = get_media_type(base_image)
         content_parts.append(
-            {"type": "input_text", "text": "\n--- IMAGE TO EDIT (add text overlay to this image) ---"}
+            {
+                "type": "input_text",
+                "text": "\n--- IMAGE TO EDIT (add text overlay to this image) ---",
+            }
         )
         content_parts.append(
             {"type": "input_image", "image_url": f"data:{base_media};base64,{base_b64}"}

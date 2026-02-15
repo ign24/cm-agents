@@ -26,6 +26,19 @@ outputs/*
 brands/*/fonts/*.ttf
 brands/*/fonts/*.otf
 
+# References (local images)
+references/*
+!references/.gitkeep
+
+# Frontend
+ui/node_modules/
+ui/.next/
+ui/.turbo/
+ui/.git/
+
+# Local assistant files
+CLAUDE.md
+
 # OS
 .DS_Store
 Thumbs.db

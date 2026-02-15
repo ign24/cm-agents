@@ -8,38 +8,52 @@ CM-Agents genera imágenes de productos para redes sociales (Instagram) automati
 
 Características principales:
 - El producto real (réplica exacta)
-- Texto integrado (nombre + precio)
+- Texto integrado (nombre + headline)
 - Logo de la marca insertado automáticamente
 - Estilo visual de la referencia
 - Consistencia de marca (colores, estilos preferidos)
 - Campañas con temas y fechas
 
-## Arquitectura: 3 Agentes en Pipeline
+## Arquitectura: Pipelines de Agentes
 
+### Generación individual (`cm generate`)
+
+```mermaid
+flowchart LR
+    A[Style ref + Product ref + Brand/Product] --> B[CreativeEngine\nClaude Sonnet 4 Vision\n1 llamada]
+    B --> C[GeneratorAgent\nGPT-Image-1.5 Responses API]
+    C --> D[Imagen final]
 ```
-[Pinterest Ref] ──┐
-                  ├──▶ EXTRACTOR ──▶ DESIGNER ──▶ GENERATOR ──▶ [Imagen Final]
-[Producto Real] ──┘
+
+### Campañas batch (`cm campaign-inpaint`)
+
+```mermaid
+flowchart LR
+    A[Style refs + Product refs + Brand/CampaignPlan] --> B[CreativeEngine\ngenera N prompts coherentes]
+    B --> C[GeneratorAgent\nbatch paralelo]
+    C --> D[N imagenes de campana]
+```
+
+### Campaña por referencias (`cm campaign-refs`)
+
+```mermaid
+flowchart TD
+    A[Producto + Escena + Fuente] --> B{Por cada dia}
+    B --> C[DirectGenerator.generate_scene_with_product\nangulo/composicion variable]
+    C --> D[DirectGenerator.add_text_overlay\nheadline + subheadline]
+    D --> E[Imagen final del dia]
 ```
 
 ### Flujo de Datos
 
 ```
 Input:
-  - style_ref: Path (imagen Pinterest)
+  - style_ref: Path (imagen Pinterest o referencia visual)
   - product_ref: Path (foto producto real)
   - brand: Brand (config marca)
   - product: Product (config producto)
 
-Extractor Output → Designer Input:
-  - ReferenceAnalysis
-    - layout: LayoutAnalysis
-    - style: StyleAnalysis  
-    - colors: ColorAnalysis
-    - typography: TypographyAnalysis
-    - product_visual: ProductVisualAnalysis (descripción exacta del producto)
-
-Designer Output → Generator Input:
+CreativeEngine Output → Generator Input:
   - GenerationPrompt
     - prompt: str (prompt optimizado en inglés)
     - visual_description: str
@@ -50,7 +64,7 @@ Generator Output:
   - GenerationResult
     - image_path: Path
     - cost_usd: float
-    - metadata
+    - id, brand_name, product_name, variant_number
 ```
 
 ## Archivos Clave
@@ -59,10 +73,19 @@ Generator Output:
 
 | Archivo | Clase | Modelo AI | Función |
 |---------|-------|-----------|---------|
-| `extractor.py` | `ExtractorAgent` | Claude Sonnet 4 (Vision) | Analiza imágenes, extrae estilo y descripción exacta del producto |
-| `designer.py` | `DesignerAgent` | Claude Sonnet 4 | Construye prompts con best practices 2026, selecciona estilo |
-| `generator.py` | `GeneratorAgent` | GPT-Image-1 | Genera imagen final con Responses API |
-| `architect.py` | `PromptArchitectAgent` | Claude Sonnet 4 | (Legacy) Versión simple sin knowledge base |
+| `creative_engine.py` | `CreativeEngine` | Claude Sonnet 4 (Vision) | Analiza referencias y genera prompts en 1 llamada |
+| `generator.py` | `GeneratorAgent` | GPT-Image-1.5 | Genera imagen final con Responses API |
+| `strategist.py` | `StrategistAgent` | Claude Sonnet 4 | Interpreta lenguaje natural, crea planes de contenido |
+| `base.py` | `BaseAgent` | N/A | Clase base abstracta para agentes |
+
+### Servicios (`src/cm_agents/services/`)
+
+| Archivo | Clase/Función | Uso |
+|---------|---------------|-----|
+| `direct_generator.py` | `DirectGenerator` | Generación escena+producto y text overlay (campaign-refs) |
+| `inpainting_compositor.py` | `InpaintingCompositor` | Composición por inpainting (campaign-inpaint) |
+| `variant_generator.py` | `VariantStrategy` | Genera variaciones de prompts |
+| `mcp_client.py` | `MCPClientService` | Búsqueda en Pinterest vía MCP |
 
 ### Modelos (`src/cm_agents/models/`)
 
@@ -72,60 +95,42 @@ Generator Output:
 | `brand.py` | `Brand`, `BrandIdentity`, `BrandAssets`, `StyleConfig`, `ColorPalette` | Configuración completa de marca |
 | `product.py` | `Product` | Configuración de producto |
 | `campaign.py` | `Campaign`, `CampaignTheme`, `ContentItem` | Campañas publicitarias |
+| `campaign_plan.py` | `CampaignPlan`, `DayPlan`, `VisualCoherence` | Plan de campaña por días |
+| `campaign_style.py` | `CampaignStyleGuide`, `PriceBadgeStyle` | Guía de estilo para campañas |
+| `plan.py` | `ContentPlan`, `ContentPlanItem`, `ContentIntent` | Planes de contenido (Strategist) |
 
 ### Orquestación (`src/cm_agents/`)
 
 | Archivo | Clase/Función | Uso |
 |---------|---------------|-----|
-| `pipeline.py` | `GenerationPipeline` | Orquesta los 3 agentes, maneja flujo completo |
-| `cli.py` | Typer commands | Interfaz CLI (`cm generate`, `cm styles`, etc.) |
+| `pipeline.py` | `GenerationPipeline` | Orquesta CreativeEngine + Generator |
+| `pipeline.py` | `CampaignPipeline` | Pipeline optimizado para campañas |
+| `cli.py` | Typer commands | Interfaz CLI (`cm generate`, `cm campaign-refs`, etc.) |
+| `styles.py` | `load_styles()`, `get_available_style_keys()` | Registro de estilos desde knowledge base |
 
 ### Knowledge Base (`knowledge/`)
 
 | Archivo | Contenido |
 |---------|-----------|
-| `design_2026.json` | Estilos dinámicos, tendencias, guidelines por categoría, principios de diseño |
+| `design_2026.json` | Estilos dinámicos, tendencias, guidelines por categoría |
+| `copy_templates.json` | Templates de copy para diferentes objetivos |
+| `industry_insights.json` | Insights por industria |
+| `marketing_calendar.json` | Calendario de marketing (fechas clave) |
 
 ## Cómo Funciona Cada Agente
 
-### 1. ExtractorAgent
+### 1. CreativeEngine
 
-**Entrada**: 2 imágenes (estilo + producto)
-**Salida**: `ReferenceAnalysis`
+**Entrada**: Imágenes de referencia (estilo + producto), `Brand`, `Product`, `CampaignPlan` (opcional)
+**Salida**: `GenerationPrompt` (uno o varios para campaña)
 
-```python
-# Prompt clave en DUAL_EXTRACTOR_SYSTEM_PROMPT
-# Captura descripción HIPER-DETALLADA del producto para réplica exacta:
-# - brand_name, product_type, exact_shape
-# - label_design, material_finish, cap_description
-# - liquid_visible, unique_features, full_description
-```
+Fusiona la funcionalidad de análisis de referencias + construcción de prompts en **una sola llamada** a Claude Vision. Más eficiente y coherente que hacerlo en pasos separados.
 
-**Método principal**: `analyze_dual(style_ref_path, product_ref_path)`
+**Métodos principales**:
+- `create_single_prompt(style_reference, product_reference, brand, product, target_size, visual_direction)` — para generación individual
+- `create_campaign_prompts(campaign_plan, style_references, product_references, brand, products)` — genera N prompts coherentes para una campaña
 
-### 2. DesignerAgent
-
-**Entrada**: `ReferenceAnalysis`, `Brand`, `Product`, `target_size`, `style`
-**Salida**: `GenerationPrompt`
-
-**Características**:
-- Carga estilos dinámicamente de `knowledge/design_2026.json`
-- Auto-selecciona estilo si `style=None` basado en categoría/mood
-- Incluye instrucciones de texto integrado (nombre + precio)
-- Enfatiza réplica EXACTA del producto
-
-```python
-# Estilos disponibles (dinámicos)
-DESIGN_STYLES = get_available_styles()  # Lee de knowledge base
-
-# Método principal
-def build_prompt(reference_analysis, brand, product, target_size, style=None):
-    # Si style es None, auto-selecciona con _recommend_style()
-    # Construye contexto enriquecido para Claude
-    # Retorna GenerationPrompt con prompt optimizado
-```
-
-### 3. GeneratorAgent
+### 2. GeneratorAgent
 
 **Entrada**: `GenerationPrompt`, imágenes de referencia, `Brand`, `Product`
 **Salida**: `GenerationResult` (imagen guardada)
@@ -135,52 +140,77 @@ def build_prompt(reference_analysis, brand, product, target_size, style=None):
 - Incluye imágenes de referencia como contexto
 - Fallback a generación simple si Responses API no disponible
 
+### 3. StrategistAgent
+
+**Entrada**: Mensaje del usuario, `Brand` (opcional), contexto de conversación
+**Salida**: Respuesta conversacional + `ContentPlan` (opcional)
+
+Agente de nivel superior que interpreta lenguaje natural para planificación de contenido.
+
+```python
+class StrategistAgent:
+    def chat(message, brand, context, images) -> (str, ContentPlan | None)
+    def create_plan(prompt, brand, brand_dir) -> ContentPlan
+```
+
+**Responsabilidades**:
+- Entender intención del usuario (`_analyze_intent`)
+- Detectar objetivo: promocionar, lanzamiento, engagement
+- Detectar ocasión: día del padre, navidad, black friday
+- Auto-seleccionar estilo de diseño según marca/industria
+- Crear queries para búsqueda de referencias en Pinterest (vía MCP)
+- Generar `ContentPlan` con items ejecutables
+
 ## Pipeline de Orquestación
 
 ```python
 # src/cm_agents/pipeline.py
 
 class GenerationPipeline:
-    def __init__(self, generator_model, use_designer=True, design_style=None):
-        self.extractor = ExtractorAgent()
-        self.prompt_agent = DesignerAgent() if use_designer else PromptArchitectAgent()
+    def __init__(self, generator_model="gpt-image-1.5", design_style=None):
+        self.engine = CreativeEngine()
         self.generator = GeneratorAgent(model=generator_model)
         self.design_style = design_style
 
     def run(self, reference_path, brand_dir, product_dir, ...):
-        # 1. Cargar configuración
         brand = Brand.load(brand_dir)
         product = Product.load(product_dir)
 
-        # 2. Extractor: Analizar referencias
-        reference_analysis = self.extractor.analyze_dual(reference_path, product_ref_path)
-
-        # 3. Designer: Construir prompt
-        prompt = self.prompt_agent.build_prompt(
-            reference_analysis, brand, product, target_size, style=self.design_style
+        # CreativeEngine: analiza refs + genera prompt (1 llamada Claude)
+        prompt = self.engine.create_single_prompt(
+            style_reference=reference_path,
+            product_reference=product_ref,
+            brand=brand, product=product,
+            visual_direction=build_visual_direction_from_style(self.design_style),
         )
 
-        # 4. Generator: Generar imagen
+        # Generator: genera imagen (Responses API)
         result = self.generator.generate_with_image_refs(prompt, ref_images, ...)
-
-        # 5. Guardar metadatos
-        result.save_metadata()
-
         return results
 ```
 
 ### Campaña por referencias (reference-driven)
 
-Flujo con **3 referencias**: producto, escena y fuente. Fondo + producto se generan **en una sola llamada** (replica exacta); el texto se agrega por día usando la referencia de tipografía.
+Flujo con **3 referencias**: producto, escena y fuente. Por cada día, se genera una base (escena+producto) con variación de ángulo/composición, y luego se agrega texto usando la referencia de tipografía.
 
 - **DirectGenerator** (`services/direct_generator.py`):
-  - `generate_scene_with_product(product_ref, scene_ref, ...)`: una llamada a Responses API con ambas imágenes; prompt con "exact replica" del producto.
-  - `add_text_overlay(..., font_ref=Path)`: agrega headline/precio siguiendo la referencia de tipografía (imagen de muestra).
-- **CampaignPipeline.run_reference_driven_campaign(product_ref, scene_ref, font_ref, brand_dir, campaign_plan=None, ...)**: genera una imagen base (escena + producto) y N imágenes finales (una por día, copy distinto). Por defecto 3 días: teaser, main_offer, last_chance.
+  - `generate_scene_with_product(product_ref, scene_ref, angle_hint=...)`: una llamada a Responses API con ambas imágenes; prompt con "exact replica" del producto y un hint de ángulo.
+  - `add_text_overlay(..., font_ref=Path)`: agrega headline/subheadline siguiendo la referencia de tipografía.
+- **CampaignPipeline.run_reference_driven_campaign(...)**: genera N bases (una por día) + N finales (una por día). Por defecto 3 días: teaser, main_offer, last_chance.
 
 ## Knowledge Base: Sistema de Estilos Dinámico
 
-Los estilos NO están hardcodeados. Se cargan de `knowledge/design_2026.json`:
+Los estilos NO están hardcodeados. Se cargan de `knowledge/design_2026.json` via `src/cm_agents/styles.py`:
+
+```python
+from cm_agents.styles import get_available_style_keys, load_styles, build_visual_direction_from_style
+
+get_available_style_keys()  # -> ["minimal_clean", "lifestyle_warm", ...]
+load_styles()               # -> dict[str, StyleInfo]
+build_visual_direction_from_style("minimal_clean")  # -> str con directivas visuales
+```
+
+Estructura del JSON:
 
 ```json
 {
@@ -194,17 +224,14 @@ Los estilos NO están hardcodeados. Se cargan de `knowledge/design_2026.json`:
       "prompt_template": "...",
       "negative_prompt": "..."
     }
-    // ... más estilos
   },
   "category_guidelines": {
     "food": {
       "recommended_styles": ["lifestyle_warm", "authentic_imperfect"],
       "lighting": ["natural_window", "golden_hour"],
       "props": ["ceramic dishes", "..."],
-      "prompt_additions": ["appetizing", "..."],
       "avoid": ["cold lighting", "..."]
     }
-    // ... más categorías
   }
 }
 ```
@@ -220,19 +247,32 @@ cm generate <producto> <marca> <ref_estilo> [-p <ref_producto>] [--style <estilo
 # Gestión de Marcas
 cm brand-list                    # Lista marcas con industria y estilos preferidos
 cm brand-create <nombre>         # Wizard interactivo para crear marca
-cm brand-show <marca>            # Ver configuración completa (identidad, assets, estilos)
+cm brand-show <marca>            # Ver configuración completa
 
 # Gestión de Campañas
 cm campaign-create <marca> <nombre>   # Crear campaña con wizard
-cm campaign-list <marca>              # Listar campañas (con progreso y estado)
+cm campaign-list <marca>              # Listar campañas
 cm campaign-show <marca> <camp>       # Ver detalles y plan de contenido
-cm campaign-inpaint <marca> <camp>   # Campaña con inpainting (escena + producto por pasos)
-cm campaign-refs <marca> -p <producto> -s <escena> -f <fuente> [--days 3]  # Campaña por referencias (fondo+producto en una llamada, texto con ref de fuente)
+cm campaign-inpaint <marca> <camp>    # Campaña con inpainting
+cm campaign-refs <marca> -p <prod> -s <escena> -f <fuente> [--days 3]  # Campaña por referencias
 
-# Otros
+# Planes de Contenido (Strategist)
+cm plan-create <marca> <prompt>       # Crear plan desde lenguaje natural
+cm plan-list                          # Listar planes
+cm plan-show <plan_id>                # Ver detalles de un plan
+cm plan-approve <plan_id>             # Aprobar plan para ejecución
+cm plan-execute <plan_id>             # Ejecutar generación de un plan aprobado
+
+# Herramientas
 cm styles [categoria]            # Listar estilos de diseño
 cm product-list <marca>          # Listar productos
 cm status                        # Estado del sistema
+cm estimate                      # Estimar costo de generación
+cm pinterest-search <query>      # Buscar imágenes en Pinterest (MCP)
+cm mcp-tools <server>            # Listar tools de un servidor MCP
+
+# Server
+cm serve [--reload]              # Iniciar API server
 ```
 
 ## Cómo Extender el Sistema
@@ -246,20 +286,19 @@ cm status                        # Estado del sistema
 ### Agregar nuevo agente
 
 1. Crear `src/cm_agents/agents/mi_agente.py`
-2. Heredar de `BaseAgent`
-3. Implementar `_validate_env()`, `name`, `description`
-4. Agregar al pipeline si es necesario
+2. Heredar de `BaseAgent` (implementar `_validate_env()`, `name`, `description`)
+3. Nota: no todos los agentes heredan de BaseAgent (ej: StrategistAgent usa Anthropic client directamente)
 
 ### Modificar flujo del pipeline
 
 1. Editar `src/cm_agents/pipeline.py`
-2. El método `run()` contiene el flujo principal
-3. Los agentes son intercambiables (misma interfaz)
+2. `GenerationPipeline.run()` contiene el flujo de generación individual
+3. `CampaignPipeline` contiene los flujos de campaña
 
 ## Variables de Entorno Requeridas
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...  # Para Extractor y Designer
+ANTHROPIC_API_KEY=sk-ant-...  # Para CreativeEngine y Strategist
 OPENAI_API_KEY=sk-...         # Para Generator
 ```
 
@@ -267,10 +306,11 @@ OPENAI_API_KEY=sk-...         # Para Generator
 
 | Agente | ~Costo |
 |--------|--------|
-| Extractor | $0.003 |
-| Designer | $0.005 |
+| CreativeEngine | $0.005 |
 | Generator | $0.040 |
-| **Total** | **~$0.05** |
+| **Total (single)** | **~$0.05** |
+
+Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 llamadas al Generator por día (base + overlay).
 
 ## Archivos de Configuración
 
@@ -348,21 +388,19 @@ OPENAI_API_KEY=sk-...         # Para Generator
 
 ## Notas Importantes para Modificaciones
 
-1. **El texto se genera integrado en la imagen** - No hay TextOverlayService, el Designer incluye instrucciones de texto en el prompt
+1. **El texto se genera integrado en la imagen** - El CreativeEngine incluye instrucciones de texto en el prompt; en `campaign-refs`, el DirectGenerator agrega headline/subheadline como paso separado
 
-2. **El producto debe ser réplica exacta** - El Extractor captura detalles hiper-específicos (marca, etiqueta, forma) para que Generator lo replique fielmente
+2. **El producto debe ser réplica exacta** - El CreativeEngine recibe la foto del producto como referencia visual para que Generator lo replique fielmente
 
-3. **Estilos son dinámicos** - Nunca hardcodear estilos, siempre usar `get_available_styles()` o cargar de knowledge base
+3. **Estilos son dinámicos** - Nunca hardcodear estilos, siempre usar `get_available_style_keys()` de `styles.py` o cargar de knowledge base
 
-4. **El Designer auto-selecciona estilo** - Prioridad: (1) `brand.style.preferred_design_styles`, (2) categoría del producto, (3) mood de la referencia
+4. **Responses API es preferida** - Generator intenta usar Responses API con imágenes de referencia para mejor fidelidad, con fallback a generación simple
 
-5. **Responses API es preferida** - Generator intenta usar Responses API con imágenes de referencia para mejor fidelidad, con fallback a generación simple
+5. **Logo se inserta automáticamente** - Si la marca tiene logo en `assets/`, se pasa como imagen de referencia adicional al Generator
 
-6. **Logo se inserta automáticamente** - Si la marca tiene logo en `assets/`, se pasa como 3ra imagen de referencia al Generator
+6. **Campañas override estilos** - Si se usa `--campaign`, el estilo de la campaña (`theme.style_override`) tiene prioridad sobre el de la marca
 
-7. **Campañas override estilos** - Si se usa `--campaign`, el estilo de la campaña (`theme.style_override`) tiene prioridad sobre el de la marca
-
-8. **Outputs por campaña** - Con `--campaign`, las imágenes se guardan en `brands/{marca}/campaigns/{camp}/outputs/`
+7. **Outputs por campaña** - Con `--campaign`, las imágenes se guardan en `brands/{marca}/campaigns/{camp}/outputs/`
 
 ## Estructura de Directorios por Marca
 
@@ -384,19 +422,10 @@ brands/{marca}/
 ## Métodos Clave del Modelo Brand
 
 ```python
-# Obtener estilos preferidos de la marca
 brand.get_preferred_styles() -> list[str]
-
-# Obtener estilos a evitar
 brand.get_avoid_styles() -> list[str]
-
-# Obtener path a un asset (logo, logo_white, icon, watermark)
 brand.get_asset_path(brand_dir, "logo") -> Path | None
-
-# Obtener logo (busca en assets.logo, luego en logo legacy)
 brand.get_logo_path(brand_dir) -> Path | None
-
-# Categoría de industria para guidelines
 brand.get_industry_category() -> str | None
 ```
 
@@ -404,46 +433,31 @@ brand.get_industry_category() -> str | None
 
 ### Arquitectura de la API
 
-```
-FastAPI Server (Uvicorn)
-├── REST Endpoints (/api/v1/)
-│   ├── /chat           - Chat con StrategistAgent
-│   ├── /plans          - CRUD de planes de contenido
-│   ├── /brands         - Gestión de marcas
-│   ├── /campaigns      - Gestión de campañas
-│   └── /generate       - Ejecución de generación
-├── WebSocket (/api/v1/ws/chat/{session_id})
-│   ├── Real-time chat
-│   ├── Progress updates
-│   └── Plan notifications
-└── Security Layer
-    ├── Rate limiting (120 req/min)
-    ├── Slug validation (anti path-traversal)
-    └── API Key opcional
+```mermaid
+flowchart TB
+    A[FastAPI server\nUvicorn] --> B[REST /api/v1]
+    A --> C[WebSocket /api/v1/ws/chat/:session_id]
+    A --> D[Security layer]
+    B --> B1[/chat]
+    B --> B2[/plans]
+    B --> B3[/brands]
+    B --> B4[/campaigns]
+    B --> B5[/generate]
+    C --> C1[chat en tiempo real]
+    C --> C2[progress updates]
+    C --> C3[plan notifications]
+    D --> D1[rate limiting 120 req/min]
+    D --> D2[slug validation]
+    D --> D3[API key opcional]
 ```
 
 ### Agente Strategist (`strategist.py`)
 
-**Nuevo en v2.1** - Agente de nivel superior que interpreta lenguaje natural.
+Agente de nivel superior que interpreta lenguaje natural.
 
-```python
-class StrategistAgent:
- def chat(message: str, brand: Brand | None, context: list, images: list[str] | None) -> (str, ContentPlan | None):
- """Chat conversacional que puede crear planes. images = data URLs base64 del frontend."""
- 
- def create_plan(prompt: str, brand: Brand, brand_dir: Path) -> ContentPlan:
- """Crea un ContentPlan estructurado desde lenguaje natural."""
-```
+**Manejo de Contexto de Marca**:
 
-**Imágenes de referencia**:
-- El frontend envía imágenes (data URLs base64) vía WebSocket `chat` o REST `POST /chat` con `images`.
-- El Strategist las recibe y las pasa a **Claude Vision** (Anthropic) como bloques multimodales.
-- No se usa OpenAI SDK ni MCP: solo Anthropic con vision nativo.
-- Claude usa las imágenes como estilo Pinterest, producto o inspiración para el plan.
-
-**Manejo de Contexto de Marca (v2.1.1+)**:
-
-El StrategistAgent ahora **carga y enriquece el contexto de marca** antes de generar planes para evitar asunciones incorrectas:
+El StrategistAgent **carga y enriquece el contexto de marca** antes de generar planes para evitar asunciones incorrectas:
 
 1. **Carga automática de contexto**:
    - Información básica de `brand.json` (nombre, industria, voz, valores, colores, estilos)
@@ -454,41 +468,24 @@ El StrategistAgent ahora **carga y enriquece el contexto de marca** antes de gen
 2. **Validación de contexto**:
    - Antes de crear planes, valida que tenga información crítica (industria, productos)
    - Si falta información, **pregunta al usuario** en lugar de asumir
-   - No asume tipo de negocio (ej: no asume que es una cervecería si no está especificado)
 
 3. **System prompt enriquecido**:
    - Incluye toda la información disponible de la marca en el system prompt
    - Instrucciones explícitas: "NO asumas información que no está especificada"
-   - Si no hay marca: muestra advertencia y solicita contexto antes de crear planes
-
-**Ejemplo de comportamiento mejorado**:
-
-```
-Usuario: "diseñemos un plan para black friday"
-❌ Antes (v2.1.0): Asumía que era una cervecería premium
-✅ Ahora (v2.1.1+): "Para crear un plan efectivo para Black Friday, necesito saber: 
-   ¿qué tipo de negocio tenés? ¿qué productos o servicios ofrecés?"
-```
 
 **Preguntas alineadas con el Pipeline (Build)**:
 
 El Strategist pregunta lo que el **GenerationPipeline** necesita para no fallar:
 
 - **Marca (slug)**: `brands/{slug}/` — se pasa `brand_slug` desde la API.
-- **Industria**: en `brand.json` (Designer y estilos).
+- **Industria**: en `brand.json` (CreativeEngine y estilos).
 - **Productos con fotos**: `products/{marca}/{producto}/` con `product.json` y `photos/` (el Generador replica el producto desde la foto).
 - **Referencia de estilo**: Pinterest, imágenes adjuntas o `brands/{marca}/references/`.
 
-Cada `ContentPlanItem.product` es el **slug** de un producto existente con fotos (nunca `"producto-general"` si hay productos). `plan.brand` es el slug de la marca para que `execute_generation` resuelva `brand_dir` y `product_dir`.
-
-**Responsabilidades**:
-- Entender intención del usuario (`_analyze_intent`)
-- Detectar objetivo: promocionar, lanzamiento, engagement, etc.
-- Detectar ocasión: día del padre, navidad, black friday
-- Detectar tono: urgente, elegante, divertido
-- Auto-seleccionar estilo de diseño según marca/industria
-- Generar copy suggestions desde templates
-- Crear queries para búsqueda de referencias
+**Imágenes de referencia**:
+- El frontend envía imágenes (data URLs base64) vía WebSocket `chat` o REST `POST /chat` con `images`.
+- El Strategist las recibe y las pasa a **Claude Vision** (Anthropic) como bloques multimodales.
+- Claude usa las imágenes como estilo Pinterest, producto o inspiración para el plan.
 
 ### Endpoints Principales
 
@@ -511,7 +508,7 @@ Crear plan de contenido desde lenguaje natural.
 {
   "prompt": "3 posts promocionales para hamburguesas 2x1",
   "brand": "resto-mario",
-  "campaign": "promo-verano"  // opcional
+  "campaign": "promo-verano"
 }
 ```
 
@@ -559,7 +556,7 @@ class ConnectionManager:
     # Múltiples conexiones por session_id
     # Auto-cleanup de conexiones muertas
     # Broadcast y unicast
-    
+
     async def send_chat_message(session_id, role, content, plan)
     async def send_progress(session_id, plan_id, item_id, status, progress)
     async def send_error(session_id, error)
@@ -577,18 +574,27 @@ class ConnectionManager:
 ### Arquitectura
 ```
 ui/src/
-├── app/              # Next.js pages
-│   ├── page.tsx      # Home con chat
-│   └── layout.tsx
+├── app/
+│   ├── page.tsx           # Home con chat
+│   ├── layout.tsx
+│   ├── brands/page.tsx
+│   ├── calendar/page.tsx
+│   ├── campaigns/page.tsx
+│   ├── gallery/page.tsx
+│   └── plans/page.tsx
 ├── components/
-│   ├── chat/         # ChatWindow, MessageList, MessageInput
-│   └── ui/           # shadcn components
+│   ├── chat/              # ChatWindow, MessageList, MessageInput, ModeToggle
+│   ├── ui/                # shadcn components
+│   ├── app-shell.tsx
+│   ├── app-sidebar.tsx
+│   └── logo.tsx
 ├── hooks/
-│   └── useWebSocket.ts  # WebSocket con auto-reconnect
+│   ├── useWebSocket.ts    # WebSocket con auto-reconnect
+│   └── use-mobile.ts
 ├── stores/
-│   └── chatStore.ts     # Zustand store
+│   └── chatStore.ts       # Zustand store
 └── lib/
-    ├── api.ts           # REST client
+    ├── api.ts             # REST client
     └── utils.ts
 ```
 
@@ -611,35 +617,38 @@ const { isConnected, sendChat, lastMessage } = useWebSocket({
 
 ## Testing (`tests/`)
 
-### Cobertura Actual: 36 tests
+### Cobertura Actual: 87 tests
 
 ```
 tests/
-├── test_api.py         # 10 tests - Health, Brands, Plans, Chat
-├── test_security.py    # 13 tests - Validación, Rate limiting
-└── test_strategist.py  # 13 tests - KnowledgeBase, Intent detection
+├── conftest.py                # Fixtures (brands_dir, knowledge_dir, mock_anthropic, mock_openai)
+├── test_agents_unit.py        # 12 tests - Strategist, Generator unit tests
+├── test_api.py                # 10 tests - Health, Brands, Plans, Chat
+├── test_base.py               #  4 tests - BaseAgent, utilities
+├── test_campaign_pipeline.py  # 11 tests - CampaignPipeline, cost tracking
+├── test_cli_commands.py       #  4 tests - plan-execute CLI command
+├── test_creative_engine.py    # 10 tests - CreativeEngine prompt generation
+├── test_pipeline_integration.py # 10 tests - Pipeline order, WebSocket, MCP
+├── test_security.py           # 13 tests - Validación, Rate limiting
+└── test_strategist.py         # 13 tests - KnowledgeBase, Intent detection
 ```
 
 ### Ejecutar Tests
 
 ```bash
 # Todos los tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Solo seguridad
-pytest tests/test_security.py -v
+uv run pytest tests/test_security.py -v
 
 # Con coverage
-pytest tests/ --cov=src/cm_agents --cov-report=html
+uv run pytest tests/ --cov=src/cm_agents --cov-report=html
 ```
 
 ### Fixtures Disponibles
 
 ```python
-@pytest.fixture
-def client() -> TestClient:
-    """FastAPI test client."""
-
 @pytest.fixture
 def brands_dir(tmp_path) -> Path:
     """Temporary brands dir with test brand."""
@@ -647,6 +656,18 @@ def brands_dir(tmp_path) -> Path:
 @pytest.fixture
 def knowledge_dir(tmp_path) -> Path:
     """Temporary knowledge dir with minimal styles."""
+
+@pytest.fixture
+def products_dir(tmp_path) -> Path:
+    """Temporary products dir with test product."""
+
+@pytest.fixture
+def mock_anthropic(monkeypatch):
+    """Mock Anthropic client for testing without API calls."""
+
+@pytest.fixture
+def mock_openai(monkeypatch):
+    """Mock OpenAI client for testing without API calls."""
 ```
 
 ## Variables de Entorno
@@ -680,10 +701,10 @@ KNOWLEDGE_DIR=knowledge
 
 ```bash
 # Backend
-pip install -e ".[dev]"     # Instalar con deps de desarrollo
+uv pip install -e ".[dev]"  # Instalar con deps de desarrollo
 ruff check src/ --fix       # Lint y auto-fix
 ruff format src/            # Format código
-pytest tests/ -v            # Tests
+uv run pytest tests/ -v     # Tests
 cm serve --reload           # Dev server con hot-reload
 
 # Frontend

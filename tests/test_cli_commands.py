@@ -130,9 +130,6 @@ def setup_test_data(tmp_path: Path):
         yield brand_dir, product_dir, plans_dir, test_plan
 
 
-@patch("cm_agents.agents.extractor.ExtractorAgent", MagicMock)
-@patch("cm_agents.agents.designer.DesignerAgent", MagicMock)
-@patch("cm_agents.agents.generator.GeneratorAgent", MagicMock)
 def test_plan_execute_success(mock_pipeline_run, setup_test_data, tmp_path: Path):
     """Test that cm plan-execute successfully runs the pipeline and updates the plan."""
     brand_dir, product_dir, plans_dir, initial_plan = setup_test_data
@@ -165,9 +162,6 @@ def test_plan_execute_success(mock_pipeline_run, setup_test_data, tmp_path: Path
     assert updated_plan.items[0].variants[0].output_path == str(Path("outputs/test/image.png"))
 
 
-@patch("cm_agents.agents.extractor.ExtractorAgent", MagicMock)
-@patch("cm_agents.agents.designer.DesignerAgent", MagicMock)
-@patch("cm_agents.agents.generator.GeneratorAgent", MagicMock)
 def test_plan_execute_no_approved_items(setup_test_data, tmp_path: Path):
     """Test plan-execute when there are no approved items."""
     brand_dir, product_dir, plans_dir, initial_plan = setup_test_data
@@ -185,9 +179,6 @@ def test_plan_execute_no_approved_items(setup_test_data, tmp_path: Path):
     assert "No hay items aprobados. Primero ejecutá: cm plan-approve" in result.stdout
 
 
-@patch("cm_agents.agents.extractor.ExtractorAgent", MagicMock)
-@patch("cm_agents.agents.designer.DesignerAgent", MagicMock)
-@patch("cm_agents.agents.generator.GeneratorAgent", MagicMock)
 def test_plan_execute_missing_brand_dir(mock_pipeline_run, setup_test_data, tmp_path: Path):
     """Test plan-execute when brand directory is missing."""
     brand_dir, product_dir, plans_dir, initial_plan = setup_test_data
@@ -207,9 +198,6 @@ def test_plan_execute_missing_brand_dir(mock_pipeline_run, setup_test_data, tmp_
     mock_pipeline_run.assert_not_called()  # Pipeline should not run
 
 
-@patch("cm_agents.agents.extractor.ExtractorAgent", MagicMock)
-@patch("cm_agents.agents.designer.DesignerAgent", MagicMock)
-@patch("cm_agents.agents.generator.GeneratorAgent", MagicMock)
 def test_plan_execute_missing_product_dir(mock_pipeline_run, setup_test_data, tmp_path: Path):
     """Test plan-execute when product directory is missing."""
     brand_dir, product_dir, plans_dir, initial_plan = setup_test_data

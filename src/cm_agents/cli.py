@@ -1,14 +1,12 @@
 """CLI para cm-agents - Sistema de generación de diseños para redes sociales."""
 
 from pathlib import Path
-from typing import Literal
-
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from .agents.designer import DESIGN_STYLES, DesignStyle
 from .pipeline import GenerationPipeline
+from .styles import get_available_style_keys
 
 console = Console()
 app = typer.Typer(
@@ -48,18 +46,13 @@ def generate(
     style: str | None = typer.Option(
         None,
         "--style",
-        help=f"Estilo de diseño 2026: {', '.join(DESIGN_STYLES)}. Si no se especifica, se auto-detecta.",
+        help="Estilo de diseño (key de knowledge base). Si no se especifica, se auto-detecta.",
     ),
     campaign: str | None = typer.Option(
         None,
         "--campaign",
         "-c",
         help="Nombre de la campaña (guarda output en campaigns/<nombre>/outputs/)",
-    ),
-    legacy: bool = typer.Option(
-        False,
-        "--legacy",
-        help="Usar PromptArchitectAgent en vez de DesignerAgent (sin best practices 2026)",
     ),
 ):
     """
@@ -92,15 +85,19 @@ def generate(
                 raise typer.Exit(1)
 
         # Validar estilo si se especificó
-        design_style: DesignStyle | None = None
+        design_style: str | None = None
         if style:
-            if style not in DESIGN_STYLES:
-                console.print(
-                    f"[red][X] Error:[/red] Estilo '{style}' no válido.\n"
-                    f"Estilos disponibles: {', '.join(DESIGN_STYLES)}"
-                )
+            available = set(get_available_style_keys())
+            if style not in available:
+                console.print(f"[red][X] Error:[/red] Estilo '{style}' no válido.")
+                if available:
+                    console.print(f"Estilos disponibles: {', '.join(sorted(available))}")
+                else:
+                    console.print(
+                        "[yellow][!] No se pudieron cargar estilos desde knowledge/design_2026.json[/yellow]"
+                    )
                 raise typer.Exit(1)
-            design_style = style  # type: ignore
+            design_style = style
 
         # Si hay campaña, verificar y usar su estilo si no se especificó uno
         campaign_dir = None
@@ -121,7 +118,6 @@ def generate(
 
         pipeline = GenerationPipeline(
             generator_model=model,
-            use_designer=not legacy,
             design_style=design_style,
         )
         results = pipeline.run(
@@ -140,65 +136,6 @@ def generate(
                 f"\n[blue][Campaña][/blue] Imágenes guardadas en: brands/{brand}/campaigns/{campaign}/outputs/"
             )
 
-    except FileNotFoundError as e:
-        console.print(f"[red][X] Error:[/red] {e}")
-        raise typer.Exit(1)
-    except Exception as e:
-        console.print(f"[red][X] Error inesperado:[/red] {e}")
-        raise typer.Exit(1)
-
-
-@app.command()
-def batch(
-    product: str = typer.Argument(..., help="Nombre del producto"),
-    brand: str = typer.Argument(..., help="Nombre de la marca"),
-    size: Literal["feed", "story"] = typer.Option(
-        "feed",
-        "--size",
-        "-s",
-        help="Tamaño objetivo (default: feed)",
-    ),
-    model: str = typer.Option(
-        "gpt-image-1.5",
-        "--model",
-        "-m",
-        help="Modelo de generación (default: gpt-image-1.5)",
-    ),
-):
-    """
-    Genera múltiples variantes usando todas las referencias de un directorio.
-
-    Ejemplo:
-        cm batch hamburguesa resto-mario --size feed
-    """
-    try:
-        pipeline = GenerationPipeline(generator_model=model)
-
-        # Buscar referencias
-        refs_dir = Path("references")
-        if not refs_dir.exists():
-            console.print("[red][X] Directorio 'references' no encontrado.[/red]")
-            raise typer.Exit(1)
-
-        # Buscar referencias del producto
-        product_refs = list(refs_dir.glob(f"{product}*.png")) + list(
-            refs_dir.glob(f"{product}*.jpg")
-        )
-
-        if not product_refs:
-            console.print(f"[red][X] No se encontraron referencias para '{product}'.[/red]")
-            console.print(f"[yellow]ℹ  Agregá imágenes a references/{product}*.png[/yellow]")
-            raise typer.Exit(1)
-
-        console.print(f"[green][OK][/green] {len(product_refs)} referencias encontradas")
-
-        pipeline.run_batch(
-            reference_paths=product_refs,
-            brand_dir=Path("brands") / brand,
-            product_dir=Path("products") / brand / product,
-            target_size=size,
-            include_text=True,
-        )
     except FileNotFoundError as e:
         console.print(f"[red][X] Error:[/red] {e}")
         raise typer.Exit(1)
@@ -493,9 +430,11 @@ def campaign_create(
     end_date = typer.prompt("Fecha fin (YYYY-MM-DD)", default=default_end.isoformat())
 
     # Estilo override opcional
-    from .agents.designer import DESIGN_STYLES
-
-    console.print(f"\n[dim]Estilos disponibles: {', '.join(DESIGN_STYLES[:6])}...[/dim]")
+    style_keys = get_available_style_keys()
+    if style_keys:
+        console.print(f"\n[dim]Estilos disponibles: {', '.join(style_keys[:6])}...[/dim]")
+    else:
+        console.print("\n[dim]Estilos disponibles: (no cargados)[/dim]")
     style_override = typer.prompt("Estilo (dejar vacío para usar el de la marca)", default="")
 
     # Crear estructura
@@ -1185,11 +1124,7 @@ def plan_execute(
                 campaign_dir = None
 
         # Initialize pipeline
-        pipeline = GenerationPipeline(
-            generator_model="gpt-image-1.5",
-            use_designer=True,
-            design_style=None,
-        )
+        pipeline = GenerationPipeline(generator_model="gpt-image-1.5", design_style=None)
 
         for i, item in enumerate(approved_items, 1):
             console.print(
@@ -1392,23 +1327,33 @@ def campaign_refs(
     brand: str = typer.Argument(..., help="Slug de la marca"),
     product: str = typer.Option(..., "--product", "-p", help="Path a la imagen del producto"),
     scene: str = typer.Option(..., "--scene", "-s", help="Path a la imagen de la escena/fondo"),
-    font: str = typer.Option(..., "--font", "-f", help="Path a la imagen de referencia de tipografía"),
-    days: int = typer.Option(3, "--days", "-d", help="Número de días (variaciones con copy distinto)"),
+    font: str = typer.Option(
+        ..., "--font", "-f", help="Path a la imagen de referencia de tipografía"
+    ),
+    days: int = typer.Option(
+        3, "--days", "-d", help="Número de días (variaciones con copy distinto)"
+    ),
     output: str | None = typer.Option(None, "--output", "-o", help="Directorio de salida"),
-    price: str = typer.Option("", "--price", help="Precio a mostrar (ej: $2.75)"),
-    title: str | None = typer.Option(None, "--title", "-t", help="Título de campaña para headlines (ej. BLACK FRIDAY). Día 2 lo usa como headline; default: PROMO"),
-    plan: str | None = typer.Option(None, "--plan", help="Path a plan.json (opcional; si no, se usan 3 días por defecto)"),
+    title: str | None = typer.Option(
+        None,
+        "--title",
+        "-t",
+        help="Título de campaña para headlines (ej. BLACK FRIDAY). Día 2 lo usa como headline; default: PROMO",
+    ),
+    plan: str | None = typer.Option(
+        None, "--plan", help="Path a plan.json (opcional; si no, se usan 3 días por defecto)"
+    ),
 ):
     """
     Campaña por referencias: 1 producto + 1 escena + 1 fuente.
 
-    Genera fondo + producto en una sola llamada (replica exacta) y agrega
-    texto por día usando la referencia de tipografía. Por defecto 3 días
-    (teaser, main_offer, last_chance).
+    Genera una variación distinta por día (cambiando ángulo del producto)
+    y agrega texto por día usando la referencia de tipografía.
+    Por defecto 3 días (teaser, main_offer, last_chance).
 
     Ejemplo:
         cm campaign-refs resto-mario --product foto.jpg --scene escena.png --font fuente.png
-        cm campaign-refs resto-mario -p producto.png -s fondo.png -f tipografia.png --days 3 --price "$2.75"
+        cm campaign-refs resto-mario -p producto.png -s fondo.png -f tipografia.png --days 3
     """
     from pathlib import Path
 
@@ -1435,9 +1380,13 @@ def campaign_refs(
             from .models.campaign_plan import CampaignPlan
 
             campaign_plan = CampaignPlan.load(plan_path)
-            console.print(f"[green][OK][/green] Plan cargado: {campaign_plan.name} ({len(campaign_plan.days)} días)")
+            console.print(
+                f"[green][OK][/green] Plan cargado: {campaign_plan.name} ({len(campaign_plan.days)} días)"
+            )
         else:
-            console.print(f"[yellow][!] Plan no encontrado: {plan_path}, usando {days} días por defecto[/yellow]")
+            console.print(
+                f"[yellow][!] Plan no encontrado: {plan_path}, usando {days} días por defecto[/yellow]"
+            )
     if campaign_plan is None:
         from .models.campaign_plan import CampaignPlan, DayPlan, VisualCoherence
         from .models.campaign_style import get_preset
@@ -1463,11 +1412,12 @@ def campaign_refs(
         brand_dir=brand_dir,
         campaign_plan=campaign_plan,
         output_dir=output_dir,
-        price=price or "",
         campaign_title=title,
     )
 
-    console.print(f"\n[bold green]Campaña por referencias completada: {len(results)} imágenes[/bold green]")
+    console.print(
+        f"\n[bold green]Campaña por referencias completada: {len(results)} imágenes[/bold green]"
+    )
 
 
 def version_callback(value: bool):

@@ -66,8 +66,9 @@ class CampaignPlan:
 
     def __post_init__(self):
         self.total_images = len(self.days)
-        # ~$0.12 por imagen con inpainting (2 generaciones)
-        self.estimated_cost_usd = (self.total_images * 0.12) + 0.015
+        # Estimación base (GeneratorAgent): ~$0.04 por imagen + overhead fijo.
+        # Nota: otros flujos (inpainting, overlays, etc.) pueden costar más.
+        self.estimated_cost_usd = (self.total_images * 0.04) + 0.015
 
     def get_all_products(self) -> list[str]:
         """Retorna lista única de todos los productos en la campaña."""
