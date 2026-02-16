@@ -2,7 +2,7 @@
 
 Sistema de orquestación de agentes AI para automatizar la creación de contenido visual para redes sociales. Genera imágenes profesionales de productos con calidad de diseño de agencia, tomando inspiración de Pinterest y aplicando best practices de diseño 2026.
 
-**Versión:** 0.1.0 | **Tests:** 87 pasando | **Seguridad:** Validación + Rate limiting
+**Versión:** 0.1.0 | **Tests:** 93 pasando | **Seguridad:** Validación + Rate limiting
 
 > **Estado:** MVP en desarrollo activo. No recomendado para producción sin hardening adicional.
 
@@ -20,7 +20,7 @@ Sistema de orquestación de agentes AI para automatizar la creación de contenid
 - **API REST + WebSocket** funcional con chat en tiempo real
 - **Frontend Next.js 16** con UI moderna y responsive
 - **StrategistAgent** - Crea planes de contenido desde lenguaje natural
-- **87 tests automatizados** - API, seguridad, y lógica de negocio
+- **93 tests automatizados** - API, seguridad, orchestrator e2e, y lógica de negocio
 - **Seguridad básica** - Validación de inputs, rate limiting, CORS
 - **Type-safe** - TypeScript + Pydantic con validaciones
 
@@ -48,12 +48,12 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    S[StrategistAgent] --> P[Worker plan\n(run/skip + reasons)]
-    P --> R[Research\n(KB + LangSearch opcional)]
-    P --> C[Copy\n(opcional: solo si include_text=true)]
-    P --> D[Design\n(opcional)]
-    P --> G[Generate\n(opcional: solo si build=true)]
-    P --> Q[QA/Retry\n(opcional)]
+    S[StrategistAgent] --> P[Worker plan<br/>run or skip + reasons]
+    P --> R[Research<br/>KB + LangSearch opcional]
+    P --> C[Copy<br/>solo si include_text=true]
+    P --> D[Design<br/>opcional]
+    P --> G[Generate<br/>solo si build=true]
+    P --> Q[QA Retry<br/>opcional]
     G --> A[(artifacts.json + report.md)]
     Q --> A
     R --> A
@@ -324,7 +324,10 @@ cm-agents/
 │               └── outputs/
 ├── references/                  # Referencias globales
 ├── knowledge/                   # Base de conocimiento
-│   └── design_2026.json         # Estilos y guidelines
+│   ├── design_2026.json         # Estilos y guidelines
+│   ├── copy_templates.json      # Templates de copy por objetivo
+│   ├── industry_insights.json   # Insights por industria
+│   └── marketing_calendar.json  # Calendario de fechas clave
 ├── templates/                   # Templates para crear marcas/campañas
 │   ├── brand_template.json
 │   └── campaign_template.json
@@ -468,7 +471,7 @@ Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 l
 - **Rate limiting**: 120 requests/minuto
 - **API Key opcional**: Protección con header X-API-Key
 - **CORS configurable**: Estricto en producción
-- **87 tests**: Cobertura de API, seguridad y lógica
+- **93 tests**: Cobertura de API, seguridad, orchestrator e2e y lógica
 
 ## Licencia
 

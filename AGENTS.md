@@ -629,20 +629,21 @@ const { isConnected, sendChat, lastMessage } = useWebSocket({
 
 ## Testing (`tests/`)
 
-### Cobertura Actual: 87 tests
+### Cobertura Actual: 93 tests
 
 ```
 tests/
-├── conftest.py                # Fixtures (brands_dir, knowledge_dir, mock_anthropic, mock_openai)
-├── test_agents_unit.py        # 12 tests - Strategist, Generator unit tests
-├── test_api.py                # 10 tests - Health, Brands, Plans, Chat
-├── test_base.py               #  4 tests - BaseAgent, utilities
-├── test_campaign_pipeline.py  # 11 tests - CampaignPipeline, cost tracking
-├── test_cli_commands.py       #  4 tests - plan-execute CLI command
-├── test_creative_engine.py    # 10 tests - CreativeEngine prompt generation
+├── conftest.py                  # Fixtures (brands_dir, knowledge_dir, mock_anthropic, mock_openai)
+├── test_agents_unit.py          # 12 tests - Strategist, Generator unit tests
+├── test_api.py                  # 10 tests - Health, Brands, Plans, Chat
+├── test_base.py                 #  4 tests - BaseAgent, utilities
+├── test_campaign_pipeline.py    # 11 tests - CampaignPipeline, cost tracking
+├── test_cli_commands.py         #  4 tests - plan-execute CLI command
+├── test_creative_engine.py      # 10 tests - CreativeEngine prompt generation
+├── test_orchestrator_e2e.py     #  6 tests - Orchestrator e2e (build, no-text, policy, artifacts)
 ├── test_pipeline_integration.py # 10 tests - Pipeline order, WebSocket, MCP
-├── test_security.py           # 13 tests - Validación, Rate limiting
-└── test_strategist.py         # 13 tests - KnowledgeBase, Intent detection
+├── test_security.py             # 13 tests - Validación, Rate limiting
+└── test_strategist.py           # 13 tests - KnowledgeBase, Intent detection
 ```
 
 ### Ejecutar Tests
