@@ -55,6 +55,9 @@ class GenerationPipeline:
         campaign_dir: Path | None = None,
         num_variants: int = 1,
         price_override: str | None = None,
+        headline: str | None = None,
+        subheadline: str | None = None,
+        theme: str | None = None,
     ) -> list[GenerationResult]:
         """
         Ejecuta el pipeline completo para generar imágenes.
@@ -67,6 +70,9 @@ class GenerationPipeline:
             include_text: Si agregar overlays de texto
             product_ref_path: Path a la imagen del PRODUCTO real (opcional)
             campaign_dir: Path a la campaña (opcional, para guardar outputs)
+            headline: Headline a integrar en la imagen (opcional)
+            subheadline: Subheadline a integrar en la imagen (opcional)
+            theme: Tema/intent del item de campaña (opcional)
 
         Returns:
             Lista de GenerationResult con las imágenes generadas
@@ -133,6 +139,20 @@ class GenerationPipeline:
             visual_direction = (
                 visual_direction + "\n" if visual_direction else ""
             ) + "Do NOT add any text, prices, headlines, or typography."
+        else:
+            copy_lines: list[str] = []
+            if theme:
+                copy_lines.append(f"- Theme: {theme}")
+            if headline:
+                copy_lines.append(f'- Headline (exact text): "{headline}"')
+            if subheadline:
+                copy_lines.append(f'- Subheadline (exact text): "{subheadline}"')
+
+            if copy_lines:
+                copy_block = "COPY TO INTEGRATE INTO THE IMAGE:\n" + "\n".join(copy_lines)
+                visual_direction = (
+                    visual_direction + "\n" if visual_direction else ""
+                ) + copy_block
 
         # Use price_override if provided (create modified product instance)
         product_for_prompt = product

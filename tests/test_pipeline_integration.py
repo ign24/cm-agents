@@ -22,7 +22,7 @@ class TestPipelineAgentOrder:
         with patch.dict(
             "os.environ", {"ANTHROPIC_API_KEY": "test-key", "OPENAI_API_KEY": "test-key"}
         ):
-            pipeline = GenerationPipeline(generator_model="gpt-image-1")  # noqa: F841
+            pipeline = GenerationPipeline(generator_model="gpt-image-1.5")  # noqa: F841
 
             assert pipeline.engine is not None
             assert pipeline.generator is not None
@@ -138,7 +138,7 @@ class TestAgentCallSequence:
                     "os.environ",
                     {"ANTHROPIC_API_KEY": "test-key", "OPENAI_API_KEY": "test-key"},
                 ):
-                    pipeline = GenerationPipeline(generator_model="gpt-image-1")
+                    pipeline = GenerationPipeline(generator_model="gpt-image-1.5")
                     pipeline.run(
                         reference_path=ref_image,
                         brand_dir=brand_dir,
@@ -253,7 +253,7 @@ class TestAgentObservability:
             with patch.dict(
                 "os.environ", {"ANTHROPIC_API_KEY": "test-key", "OPENAI_API_KEY": "test-key"}
             ):
-                pipeline = GenerationPipeline(generator_model="gpt-image-1")  # noqa: F841
+                pipeline = GenerationPipeline(generator_model="gpt-image-1.5")  # noqa: F841
 
                 # Pipeline initialization should log
                 # Actual run would log more

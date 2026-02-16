@@ -224,16 +224,3 @@ def mock_mcp_service(monkeypatch):
 
     monkeypatch.setattr("cm_agents.services.mcp_client.MCPClientService", MockMCPService)
     return call_log
-
-
-@pytest.fixture
-def agent_call_tracker():
-    """Track which agents were called and in what order."""
-    tracker = {
-        "calls": [],
-        "extractor": 0,
-        "designer": 0,
-        "generator": 0,
-        "strategist": 0,
-    }
-    return tracker

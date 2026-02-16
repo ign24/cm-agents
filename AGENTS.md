@@ -257,7 +257,7 @@ cm campaign-inpaint <marca> <camp>    # Campaña con inpainting
 cm campaign-refs <marca> -p <prod> -s <escena> -f <fuente> [--days 3]  # Campaña por referencias
 
 # Planes de Contenido (Strategist)
-cm plan-create <marca> <prompt>       # Crear plan desde lenguaje natural
+cm plan-create <prompt> --brand <marca>  # Crear plan desde lenguaje natural
 cm plan-list                          # Listar planes
 cm plan-show <plan_id>                # Ver detalles de un plan
 cm plan-approve <plan_id>             # Aprobar plan para ejecución
@@ -304,6 +304,7 @@ cm serve [--reload]              # Iniciar API server
 ```
 ANTHROPIC_API_KEY=sk-ant-...  # Para CreativeEngine y Strategist
 OPENAI_API_KEY=sk-...         # Para Generator
+LANGSEARCH_API_KEY=ls-...     # Opcional: web search de tendencias (ResearchWorker)
 ```
 
 ## Costos por Generación
@@ -311,8 +312,8 @@ OPENAI_API_KEY=sk-...         # Para Generator
 | Agente | ~Costo |
 |--------|--------|
 | CreativeEngine | $0.005 |
-| Generator | $0.040 |
-| **Total (single)** | **~$0.05** |
+| Generator (GPT-Image-1.5) | $0.060 |
+| **Total (single)** | **~$0.07** |
 
 Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 llamadas al Generator por día (base + overlay).
 
@@ -687,6 +688,9 @@ def mock_openai(monkeypatch):
 # AI API Keys (requeridas)
 ANTHROPIC_API_KEY=sk-ant-...
 OPENAI_API_KEY=sk-...
+
+# Research (opcional)
+LANGSEARCH_API_KEY=ls-...
 
 # Server
 ENVIRONMENT=development|production

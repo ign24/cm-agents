@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Costos estimados
 COST_PER_IMAGE = {
     "gpt-image-1": 0.04,
-    "gpt-image-1.5": 0.08,  # Más caro pero mejor calidad
+    "gpt-image-1.5": 0.06,
 }
 
 

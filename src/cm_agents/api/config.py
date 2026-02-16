@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """API configuration loaded from environment."""
 
     PROJECT_NAME: str = "CM Agents API"
-    VERSION: str = "2.1.0"
+    VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
 
     # Server

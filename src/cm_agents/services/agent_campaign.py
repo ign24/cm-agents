@@ -6,12 +6,15 @@ This module intentionally stays simple and operational with low overhead.
 from __future__ import annotations
 
 import json
+import os
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+import httpx
 
 from ..agents.strategist import KnowledgeBase, StrategistAgent
 from ..models.brand import Brand
@@ -26,6 +29,9 @@ class TrendBrief:
     recommended_styles: list[str]
     key_insights: list[str]
     category_guidelines: dict[str, dict[str, Any]]
+    source_mode: str = "knowledge_base"
+    web_query: str | None = None
+    web_sources: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -39,11 +45,87 @@ class CampaignItem:
     subheadline: str
 
 
+@dataclass
+class WorkerDecision:
+    name: str
+    run: bool
+    reason: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+
+
 class ResearchWorker:
-    """Local Agentic-RAG-like retrieval over knowledge files."""
+    """Retrieval worker over local KB with optional LangSearch web search."""
+
+    LANGSEARCH_ENDPOINT = "https://api.langsearch.com/v1/web-search"
 
     def __init__(self, knowledge_dir: Path = Path("knowledge")):
         self.kb = KnowledgeBase(knowledge_dir=knowledge_dir)
+        self.langsearch_api_key = os.getenv("LANGSEARCH_API_KEY", "").strip()
+
+    @staticmethod
+    def _compact_text(text: str, limit: int = 180) -> str:
+        cleaned = " ".join(text.split())
+        if len(cleaned) <= limit:
+            return cleaned
+        return cleaned[: limit - 3].rstrip() + "..."
+
+    def _build_web_query(self, brand: Brand, products: dict[str, Product], objective: str) -> str:
+        product_names = [p.name for p in products.values()][:3]
+        products_str = ", ".join(product_names) if product_names else "consumer product"
+        industry = brand.industry or "generic"
+        return (
+            f"visual marketing trends for {industry} campaigns, products: {products_str}, "
+            f"objective: {objective}, social media ads"
+        )
+
+    def _search_web(self, query: str) -> tuple[list[dict[str, str]], str]:
+        if not self.langsearch_api_key:
+            return [], "disabled_missing_api_key"
+
+        headers = {
+            "Authorization": f"Bearer {self.langsearch_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "query": query,
+            "freshness": "oneMonth",
+            "summary": True,
+            "count": 8,
+        }
+
+        try:
+            response = httpx.post(
+                self.LANGSEARCH_ENDPOINT,
+                headers=headers,
+                json=payload,
+                timeout=20.0,
+            )
+            response.raise_for_status()
+            body = response.json()
+            values = body.get("data", {}).get("webPages", {}).get("value", [])
+            sources: list[dict[str, str]] = []
+            for item in values[:5]:
+                if not isinstance(item, dict):
+                    continue
+                url = str(item.get("url") or "").strip()
+                if not url:
+                    continue
+                title = str(item.get("name") or "").strip()
+                snippet = str(item.get("snippet") or "").strip()
+                summary = str(item.get("summary") or "").strip()
+                sources.append(
+                    {
+                        "title": title,
+                        "url": url,
+                        "snippet": self._compact_text(snippet),
+                        "summary": self._compact_text(summary),
+                    }
+                )
+            if not sources:
+                return [], "no_results"
+            return sources, "ok"
+        except Exception:
+            return [], "request_failed"
 
     def run(self, brand: Brand, products: dict[str, Product], objective: str) -> TrendBrief:
         industry = brand.industry or "generic"
@@ -68,6 +150,25 @@ class ResearchWorker:
                 "Prefer high contrast text areas for social formats.",
             ]
 
+        web_query: str | None = None
+        web_sources: list[dict[str, str]] = []
+        source_mode = "knowledge_base"
+        if self.langsearch_api_key:
+            web_query = self._build_web_query(brand=brand, products=products, objective=objective)
+            web_sources, web_status = self._search_web(web_query)
+            if web_status == "ok" and web_sources:
+                source_mode = "langsearch+knowledge_base"
+                for source in web_sources[:3]:
+                    source_text = (
+                        source.get("summary") or source.get("snippet") or source.get("title", "")
+                    )
+                    if source_text:
+                        key_insights.append(
+                            f"Web trend: {source_text} (source: {source.get('url', '')})"
+                        )
+            else:
+                source_mode = f"knowledge_base_fallback({web_status})"
+
         category_guidelines: dict[str, dict[str, Any]] = {}
         for slug, product in products.items():
             category = product.category or "generic"
@@ -79,6 +180,9 @@ class ResearchWorker:
             recommended_styles=list(dict.fromkeys(recommended)),
             key_insights=key_insights,
             category_guidelines=category_guidelines,
+            source_mode=source_mode,
+            web_query=web_query,
+            web_sources=web_sources,
         )
 
 
@@ -199,8 +303,266 @@ class OrchestratorCampaignService:
         refs_dir = brand_dir / "references"
         if not refs_dir.exists():
             return False
-        ref_files = list(refs_dir.glob("*.jpg")) + list(refs_dir.glob("*.png"))
+        ref_files = []
+        for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
+            ref_files.extend(refs_dir.glob(ext))
         return len(ref_files) > 0
+
+    @staticmethod
+    def _infer_include_text(objective: str) -> bool:
+        msg = (objective or "").strip().lower()
+        no_text_markers = (
+            "sin texto",
+            "no text",
+            "sin copy",
+            "sin headline",
+            "sin titulares",
+            "solo producto",
+            "solo la foto",
+            "sin tipografia",
+            "sin tipografía",
+        )
+        return not any(m in msg for m in no_text_markers)
+
+    def _policy_worker_plan(
+        self,
+        *,
+        build: bool,
+        include_text: bool,
+        has_style_ref_input: bool,
+        has_brand_style_ref: bool,
+        objective: str,
+        max_retries: int,
+    ) -> list[WorkerDecision]:
+        """Deterministic fallback policy when LLM orchestration is unavailable."""
+
+        obj = (objective or "").lower()
+        asks_trends = any(
+            k in obj
+            for k in (
+                "tendencia",
+                "trends",
+                "inspiracion",
+                "inspiración",
+                "que esta funcionando",
+                "qué está funcionando",
+                "referencias",
+            )
+        )
+
+        # Research adds most value when we're missing references or user explicitly asks.
+        research_run = (
+            build and not has_style_ref_input and not has_brand_style_ref
+        ) or asks_trends
+
+        # Copy only matters if we allow text in the image.
+        copy_run = include_text
+
+        # Design improves coherence; keep it on for build.
+        design_run = build
+
+        generate_run = build
+        qa_run = build and max_retries > 0
+
+        return [
+            WorkerDecision(
+                name="research",
+                run=research_run,
+                reason="missing style references"
+                if (research_run and not asks_trends)
+                else "trend request"
+                if research_run
+                else "",
+            ),
+            WorkerDecision(
+                name="copy",
+                run=copy_run,
+                reason="include_text=true" if copy_run else "include_text=false",
+            ),
+            WorkerDecision(
+                name="design",
+                run=design_run,
+                reason="build=true" if design_run else "build=false",
+            ),
+            WorkerDecision(
+                name="generate",
+                run=generate_run,
+                reason="build=true" if generate_run else "build=false",
+            ),
+            WorkerDecision(
+                name="qa",
+                run=qa_run,
+                reason="max_retries>0" if qa_run else "max_retries=0 or build=false",
+                params={"max_retries": max_retries},
+            ),
+        ]
+
+    def _decide_worker_plan(
+        self,
+        *,
+        brand_slug: str,
+        product_slugs: list[str],
+        objective: str,
+        days: int,
+        build: bool,
+        include_text: bool,
+        max_retries: int,
+        has_style_ref_input: bool,
+        has_brand_style_ref: bool,
+    ) -> tuple[list[WorkerDecision], str, str]:
+        """Return worker decisions (run/skip) with reasons.
+
+        - If Strategist LLM is available: use it as orchestrator.
+        - Else: fall back to deterministic policy.
+        """
+
+        allowed = {"research", "copy", "design", "generate", "qa"}
+
+        client = self.strategist._get_client()
+        if client is None:
+            return (
+                self._policy_worker_plan(
+                    build=build,
+                    include_text=include_text,
+                    has_style_ref_input=has_style_ref_input,
+                    has_brand_style_ref=has_brand_style_ref,
+                    objective=objective,
+                    max_retries=max_retries,
+                ),
+                "fallback_policy_no_llm",
+                "fallback",
+            )
+
+        user_prompt = (
+            "Decide which workers to run for this campaign request. Return ONLY strict JSON.\n"
+            "Hard constraints:\n"
+            "- If build=false: generate=false and qa=false\n"
+            "- If include_text=false: copy=false\n"
+            "- If build=true: generate must be true\n"
+            "Policy guidance:\n"
+            "- Run research if user asks for trends/inspiration OR if there is no style ref input and no brand references\n"
+            "- Run copy only if include_text=true\n"
+            "- Run design if build=true\n"
+            "- Run qa if build=true and max_retries>0\n\n"
+            f"brand={brand_slug}\n"
+            f"products={product_slugs}\n"
+            f"objective={objective}\n"
+            f"days={days}\n"
+            f"build={build}\n"
+            f"include_text={include_text}\n"
+            f"max_retries={max_retries}\n"
+            f"has_style_ref_input={has_style_ref_input}\n"
+            f"has_brand_style_ref={has_brand_style_ref}\n"
+            f"allowed_workers={sorted(allowed)}\n"
+            'JSON schema: {"workers": [{"name":"research","run":true,"reason":"...","params":{}}], "reason":"..."}'
+        )
+
+        try:
+            response = client.messages.create(
+                model=self.strategist.model,
+                max_tokens=450,
+                temperature=0,
+                system="You are a strict JSON planner for agent orchestration. No markdown.",
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            text = self._extract_response_text(response)
+            if not text:
+                return (
+                    self._policy_worker_plan(
+                        build=build,
+                        include_text=include_text,
+                        has_style_ref_input=has_style_ref_input,
+                        has_brand_style_ref=has_brand_style_ref,
+                        objective=objective,
+                        max_retries=max_retries,
+                    ),
+                    "fallback_empty_response",
+                    "fallback",
+                )
+
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                match = re.search(r"\{[\s\S]*\}", text)
+                if not match:
+                    return (
+                        self._policy_worker_plan(
+                            build=build,
+                            include_text=include_text,
+                            has_style_ref_input=has_style_ref_input,
+                            has_brand_style_ref=has_brand_style_ref,
+                            objective=objective,
+                            max_retries=max_retries,
+                        ),
+                        "fallback_invalid_json",
+                        "fallback",
+                    )
+                parsed = json.loads(match.group())
+
+            raw_workers = parsed.get("workers", [])
+            decisions_by_name: dict[str, WorkerDecision] = {
+                w.name: w
+                for w in self._policy_worker_plan(
+                    build=build,
+                    include_text=include_text,
+                    has_style_ref_input=has_style_ref_input,
+                    has_brand_style_ref=has_brand_style_ref,
+                    objective=objective,
+                    max_retries=max_retries,
+                )
+            }
+
+            if isinstance(raw_workers, list):
+                for w in raw_workers:
+                    if not isinstance(w, dict):
+                        continue
+                    name = w.get("name")
+                    if not isinstance(name, str) or name not in allowed:
+                        continue
+                    run_flag = bool(w.get("run"))
+                    reason = str(w.get("reason") or "").strip()
+                    raw_params = w.get("params")
+                    params: dict[str, Any] = (
+                        dict(raw_params) if isinstance(raw_params, dict) else {}
+                    )
+                    decisions_by_name[name] = WorkerDecision(
+                        name=name,
+                        run=run_flag,
+                        reason=reason,
+                        params=params,
+                    )
+
+            # Enforce hard constraints.
+            if not build:
+                decisions_by_name["generate"].run = False
+                decisions_by_name["qa"].run = False
+            if build:
+                decisions_by_name["generate"].run = True
+            if not include_text:
+                decisions_by_name["copy"].run = False
+            if max_retries <= 0:
+                decisions_by_name["qa"].run = False
+
+            # Stable ordering
+            ordered = [
+                decisions_by_name[n]
+                for n in ("research", "copy", "design", "generate", "qa")
+                if n in decisions_by_name
+            ]
+            return ordered, str(parsed.get("reason") or "llm_worker_plan"), "llm"
+        except Exception:
+            return (
+                self._policy_worker_plan(
+                    build=build,
+                    include_text=include_text,
+                    has_style_ref_input=has_style_ref_input,
+                    has_brand_style_ref=has_brand_style_ref,
+                    objective=objective,
+                    max_retries=max_retries,
+                ),
+                "fallback_error",
+                "fallback",
+            )
 
     def _decide_execution_plan(
         self,
@@ -211,79 +573,24 @@ class OrchestratorCampaignService:
         build: bool,
         has_style_ref_input: bool,
         has_brand_style_ref: bool,
-    ) -> tuple[list[str], str]:
-        """Ask Strategist LLM when to execute each worker; fallback to safe default."""
-        default_sequence = ["research", "copy", "design"] + (["generate", "qa"] if build else [])
+        include_text: bool,
+        max_retries: int,
+    ) -> tuple[list[str], str, list[WorkerDecision], str]:
+        """Backward-compatible wrapper returning both sequence and full decisions."""
 
-        client = self.strategist._get_client()
-        if client is None:
-            return default_sequence, "fallback_local_no_llm"
-
-        allowed = ["research", "copy", "design", "generate", "qa"]
-        try:
-            user_prompt = (
-                "Decide CUANDO ejecutar cada worker para esta campana y responde SOLO JSON.\n"
-                f"brand={brand_slug}\n"
-                f"products={product_slugs}\n"
-                f"objective={objective}\n"
-                f"days={days}\n"
-                f"build={build}\n"
-                f"has_style_ref_input={has_style_ref_input}\n"
-                f"has_brand_style_ref={has_brand_style_ref}\n"
-                f"allowed_workers={allowed}\n"
-                "Rules:\n"
-                "- If build=false, generate and qa MUST be false.\n"
-                "- If build=true, generate MUST be true.\n"
-                "- If generate=true, qa SHOULD be true.\n"
-                "- copy and design SHOULD usually run for campaign quality.\n"
-                'JSON schema: {"workers": [{"name":"research","run":true,"when":"..."}], "reason": "..."}'
-            )
-
-            response = client.messages.create(
-                model=self.strategist.model,
-                max_tokens=300,
-                temperature=0,
-                system=(
-                    "You are an orchestration planner for AI campaign pipelines. "
-                    "Decide exactly when each worker should execute based on context. "
-                    "Return strict JSON only. "
-                    "No markdown, no prose."
-                ),
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            text = self._extract_response_text(response)
-            if not text:
-                return default_sequence, "fallback_empty_response"
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError:
-                match = re.search(r"\{[\s\S]*\}", text)
-                if not match:
-                    return default_sequence, "fallback_invalid_json"
-                parsed = json.loads(match.group())
-
-            workers_raw = parsed.get("workers", [])
-            seq_raw = [w.get("name") for w in workers_raw if isinstance(w, dict) and w.get("run")]
-            seq: list[str] = []
-            for w in seq_raw:
-                if isinstance(w, str) and w in allowed and w not in seq:
-                    seq.append(w)
-
-            # Hard constraints
-            if "copy" not in seq:
-                seq.insert(0, "copy")
-            if "design" not in seq:
-                seq.append("design")
-            if build and "generate" not in seq:
-                seq.append("generate")
-            if build and "qa" not in seq:
-                seq.append("qa")
-            if not build:
-                seq = [w for w in seq if w not in {"generate", "qa"}]
-
-            return seq, str(parsed.get("reason", "llm_execution_plan"))
-        except Exception:
-            return default_sequence, "fallback_error"
+        decisions, reason, mode = self._decide_worker_plan(
+            brand_slug=brand_slug,
+            product_slugs=product_slugs,
+            objective=objective,
+            days=days,
+            build=build,
+            include_text=include_text,
+            max_retries=max_retries,
+            has_style_ref_input=has_style_ref_input,
+            has_brand_style_ref=has_brand_style_ref,
+        )
+        seq = [d.name for d in decisions if d.run]
+        return seq, reason, decisions, mode
 
     def _translate_user_request(
         self,
@@ -298,6 +605,7 @@ class OrchestratorCampaignService:
             or "promocionar campaña visual con consistencia de marca",
             "days": 3,
             "build": True,
+            "include_text": self._infer_include_text(user_request),
             "products": [],
             "reason": "fallback_heuristic",
             "mode": "fallback",
@@ -319,8 +627,9 @@ class OrchestratorCampaignService:
             "Rules:\n"
             "- days must be integer between 1 and 14\n"
             "- build is boolean\n"
+            "- include_text is boolean (false if user asks for no text/copy)\n"
             "- products must be subset of available_products (or empty for auto)\n"
-            'JSON schema: {"objective": "...", "days": 3, "build": true, "products": ["slug"], "reason": "..."}'
+            'JSON schema: {"objective": "...", "days": 3, "build": true, "include_text": true, "products": ["slug"], "reason": "..."}'
         )
 
         try:
@@ -358,6 +667,8 @@ class OrchestratorCampaignService:
 
             build = bool(parsed.get("build", True))
 
+            include_text = bool(parsed.get("include_text", default["include_text"]))
+
             products = [
                 p
                 for p in parsed.get("products", [])
@@ -368,6 +679,7 @@ class OrchestratorCampaignService:
                 "objective": objective,
                 "days": days,
                 "build": build,
+                "include_text": include_text,
                 "products": products,
                 "reason": str(parsed.get("reason", "llm_translated")),
                 "mode": "llm",
@@ -400,6 +712,7 @@ class OrchestratorCampaignService:
             objective=translation["objective"],
             days=translation["days"],
             build=translation["build"],
+            include_text=translation.get("include_text", True),
             style_ref=style_ref,
             max_retries=max_retries,
             require_llm_orchestrator=require_llm_orchestrator,
@@ -419,6 +732,7 @@ class OrchestratorCampaignService:
         objective: str,
         days: int = 3,
         build: bool = False,
+        include_text: bool | None = None,
         style_ref: Path | None = None,
         max_retries: int = 1,
         require_llm_orchestrator: bool = False,
@@ -432,6 +746,10 @@ class OrchestratorCampaignService:
             raise FileNotFoundError(f"Marca no encontrada: {brand_slug}")
 
         brand = Brand.load(brand_dir)
+
+        effective_include_text = (
+            include_text if include_text is not None else self._infer_include_text(objective)
+        )
 
         if not product_slugs:
             product_slugs = self._discover_products_with_photos(brand_slug)
@@ -455,22 +773,28 @@ class OrchestratorCampaignService:
                 "LLM orchestrator requerido pero ANTHROPIC_API_KEY no está configurada."
             )
 
-        worker_sequence, worker_reason = self._decide_execution_plan(
-            brand_slug=brand_slug,
-            product_slugs=product_slugs,
-            objective=objective,
-            days=days,
-            build=build,
-            has_style_ref_input=style_ref is not None,
-            has_brand_style_ref=self._has_brand_style_reference(brand_dir),
+        worker_sequence, worker_reason, worker_decisions, orchestrator_mode = (
+            self._decide_execution_plan(
+                brand_slug=brand_slug,
+                product_slugs=product_slugs,
+                objective=objective,
+                days=days,
+                build=build,
+                has_style_ref_input=style_ref is not None,
+                has_brand_style_ref=self._has_brand_style_reference(brand_dir),
+                include_text=effective_include_text,
+                max_retries=max_retries,
+            )
         )
-        orchestrator_mode = "llm" if not worker_reason.startswith("fallback") else "fallback"
+
+        decisions_by_name = {d.name: d for d in worker_decisions}
 
         orchestration_trace: list[dict[str, Any]] = [
             {
                 "step": "orchestration_decision",
                 "worker_sequence": worker_sequence,
                 "reason": worker_reason,
+                "include_text": effective_include_text,
             }
         ]
 
@@ -480,21 +804,63 @@ class OrchestratorCampaignService:
             key_insights=[f"Objective focus: {objective}"],
             category_guidelines={},
         )
-        if "research" in worker_sequence:
+        if decisions_by_name.get("research", WorkerDecision("research", False)).run:
             trend = self.research.run(brand=brand, products=products, objective=objective)
-            orchestration_trace.append({"step": "worker_done", "worker": "research"})
+            orchestration_trace.append(
+                {
+                    "step": "worker_done",
+                    "worker": "research",
+                    "source_mode": trend.source_mode,
+                    "web_sources": len(trend.web_sources),
+                }
+            )
 
-        copy_items = self.copy.run(products=products, days=days, objective=objective)
-        if "copy" in worker_sequence:
+        def _items_without_copy() -> list[CampaignItem]:
+            items: list[CampaignItem] = []
+            theme_cycle = CopyWorker.THEMES
+            for day_idx in range(1, days + 1):
+                theme = theme_cycle[(day_idx - 1) % len(theme_cycle)]
+                for product_slug in products.keys():
+                    items.append(
+                        CampaignItem(
+                            day=day_idx,
+                            theme=theme,
+                            product=product_slug,
+                            size="feed",
+                            style="",
+                            headline="",
+                            subheadline="",
+                        )
+                    )
+            return items
+
+        if decisions_by_name.get("copy", WorkerDecision("copy", False)).run:
+            copy_items = self.copy.run(products=products, days=days, objective=objective)
             orchestration_trace.append({"step": "worker_done", "worker": "copy"})
+        else:
+            copy_items = _items_without_copy()
+            orchestration_trace.append(
+                {"step": "worker_skipped", "worker": "copy", "reason": "plan"}
+            )
 
-        selected_style, visual_direction, designed_items = self.design.run(trend, copy_items)
-        if "design" in worker_sequence:
+        if decisions_by_name.get("design", WorkerDecision("design", False)).run:
+            selected_style, visual_direction, designed_items = self.design.run(trend, copy_items)
             orchestration_trace.append({"step": "worker_done", "worker": "design"})
+        else:
+            selected_style = (brand.get_preferred_styles() or ["minimal_clean"])[0]
+            visual_direction = build_visual_direction_from_style(selected_style)
+            designed_items = [
+                CampaignItem(**{**asdict(i), "style": selected_style}) for i in copy_items
+            ]
+            orchestration_trace.append(
+                {"step": "worker_skipped", "worker": "design", "reason": "plan"}
+            )
 
         generation_results: list[dict[str, Any]] = []
-        qa_enabled = "qa" in worker_sequence
-        if build and "generate" in worker_sequence:
+        qa_enabled = decisions_by_name.get("qa", WorkerDecision("qa", False)).run
+        generate_enabled = decisions_by_name.get("generate", WorkerDecision("generate", False)).run
+
+        if build and generate_enabled:
             pipeline = GenerationPipeline(
                 generator_model="gpt-image-1.5", design_style=selected_style
             )
@@ -517,10 +883,19 @@ class OrchestratorCampaignService:
                 except Exception:
                     product_ref = None
 
+                if product_ref is not None and not Path(product_ref).exists():
+                    generation_results.append(
+                        {
+                            "item": asdict(item),
+                            "error": f"Referencia de producto no encontrada: {product_ref}",
+                        }
+                    )
+                    continue
+
                 item_done = False
                 last_error: str | None = None
                 attempts = 0
-                max_attempts = max(1, max_retries + 1)
+                max_attempts = max(1, max_retries + 1) if qa_enabled else 1
 
                 while attempts < max_attempts and not item_done:
                     attempts += 1
@@ -537,9 +912,12 @@ class OrchestratorCampaignService:
                             brand_dir=brand_dir,
                             product_dir=product_dir,
                             target_sizes=[item.size],
-                            include_text=True,
-                            product_ref_path=Path(product_ref) if product_ref else None,
+                            include_text=effective_include_text,
+                            product_ref_path=product_ref if product_ref else None,
                             campaign_dir=None,
+                            headline=item.headline,
+                            subheadline=item.subheadline,
+                            theme=item.theme,
                         )
 
                         first_image = results[0].image_path if results else None
@@ -602,12 +980,14 @@ class OrchestratorCampaignService:
                 "objective": objective,
                 "days": days,
                 "build": build,
+                "include_text": effective_include_text,
                 "max_retries": max_retries,
             },
             "worker_plan": {
                 "sequence": worker_sequence,
                 "reason": worker_reason,
                 "mode": orchestrator_mode,
+                "workers": [asdict(w) for w in worker_decisions],
             },
             "trend_brief": asdict(trend),
             "selected_style": selected_style,
@@ -635,7 +1015,9 @@ class OrchestratorCampaignService:
                     continue
                 try:
                     product = Product.load(product_dir)
-                    product.get_main_photo(product_dir)
+                    photo_path = product.get_main_photo(product_dir)
+                    if not Path(photo_path).exists():
+                        continue
                     if product_dir.name not in discovered:
                         discovered.append(product_dir.name)
                 except Exception:
@@ -661,7 +1043,9 @@ class OrchestratorCampaignService:
 
         refs_dir = brand_dir / "references"
         if refs_dir.exists():
-            ref_files = list(refs_dir.glob("*.jpg")) + list(refs_dir.glob("*.png"))
+            ref_files = []
+            for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
+                ref_files.extend(refs_dir.glob(ext))
             if ref_files:
                 return ref_files[0]
 
@@ -684,6 +1068,8 @@ class OrchestratorCampaignService:
             "## Trend Brief",
             f"- Industry: {trend.get('industry', '-')}",
             f"- Selected style: {artifacts.get('selected_style', '-')}",
+            f"- Research source mode: {trend.get('source_mode', 'knowledge_base')}",
+            f"- Web sources: {len(trend.get('web_sources', []))}",
             "",
             "## Items",
             f"- Total items: {len(artifacts.get('campaign_items', []))}",

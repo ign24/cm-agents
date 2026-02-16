@@ -1251,7 +1251,7 @@ Cuando el usuario apruebe el plan, el **GenerationPipeline** (CreativeEngine →
 
 3. **Marca** = slug del directorio en `brands/` (ej: mi-marca)
 
-4. **Industria** en la marca (para Designer y recomendaciones de estilo)
+4. **Industria** en la marca (para CreativeEngine y recomendaciones de estilo)
 
 ## Preguntas que DEBES hacer ANTES de crear un plan (para que el Build no falle)
 

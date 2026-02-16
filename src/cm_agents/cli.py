@@ -38,10 +38,10 @@ def generate(
         help="Agregar overlays de texto (default: Sí)",
     ),
     model: str = typer.Option(
-        "gpt-image-1",
+        "gpt-image-1.5",
         "--model",
         "-m",
-        help="Modelo de generación (default: gpt-image-1)",
+        help="Modelo de generación (default: gpt-image-1.5)",
     ),
     style: str | None = typer.Option(
         None,

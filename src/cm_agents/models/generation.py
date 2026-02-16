@@ -117,7 +117,7 @@ class ReferenceAnalysis(BaseModel):
     )
 
     def to_prompt_context(self) -> str:
-        """Convierte el análisis a contexto para el Designer."""
+        """Convierte el análisis a contexto para el CreativeEngine."""
         composition_details = []
         if self.layout.composition_technique:
             composition_details.append(f"technique: {self.layout.composition_technique}")
@@ -127,9 +127,9 @@ class ReferenceAnalysis(BaseModel):
             composition_details.append(f"camera angle: {self.layout.camera_angle}")
         if self.layout.depth_of_field:
             composition_details.append(f"depth of field: {self.layout.depth_of_field}")
-        
+
         composition_str = f", {', '.join(composition_details)}" if composition_details else ""
-        
+
         return f"""
 Layout: {self.layout.product_position}, composición {self.layout.composition}{composition_str}
 Text zones: {", ".join(self.layout.text_zones)}
@@ -157,7 +157,7 @@ class GenerationParams(BaseModel):
 
 
 class GenerationPrompt(BaseModel):
-    """Prompt generado por el Prompt Architect."""
+    """Prompt generado por el CreativeEngine."""
 
     prompt: str = Field(..., description="Prompt principal para el modelo de imagen")
     visual_description: str = Field(

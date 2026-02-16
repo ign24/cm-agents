@@ -26,23 +26,46 @@ Sistema de orquestación de agentes AI para automatizar la creación de contenid
 
 ## Arquitectura
 
+Este proyecto se usa principalmente como **chat ida y vuelta**: el usuario pide, el Strategist pregunta lo que falta, y recien cuando el usuario confirma se ejecuta el build real.
+
+### Chat -> Build (lo que pasa en runtime)
+
 ```mermaid
-flowchart LR
-    A[Style ref + Product ref + Brand/Product] --> B[CreativeEngine\nClaude Sonnet 4 Vision\n1 llamada: analiza + diseña prompt]
-    B --> C[GeneratorAgent\nGPT-Image-1.5 Responses API\nrender final con referencias]
-    C --> D[Imagen final]
-    KB[(knowledge/design_2026.json\n17 estilos + guidelines)] --> B
+sequenceDiagram
+    participant U as Usuario
+    participant S as StrategistAgent
+    participant O as OrchestratorCampaignService
+
+    U->>S: Pedido (lenguaje natural)
+    S-->>U: Preguntas / clarificaciones (si falta info)
+    U->>S: Confirmacion (/build, ok, dale)
+    S->>O: Execution plan (run/skip por worker)
+    O-->>U: build_started
+    O-->>U: build_completed (run_id + resumen)
 ```
 
-### Flujo campaign-refs (reference-driven)
+### Strategist como Orquestador (delegacion dinamica)
 
 ```mermaid
 flowchart TD
-    A[Producto ref + Escena ref + Fuente ref] --> B{Por cada dia}
-    B --> C[generate_scene_with_product\nbase con angulo distinto]
-    C --> D[add_text_overlay\nheadline + subheadline]
-    D --> E[Imagen final del dia]
+    S[StrategistAgent] --> P[Worker plan\n(run/skip + reasons)]
+    P --> R[Research\n(KB + LangSearch opcional)]
+    P --> C[Copy\n(opcional: solo si include_text=true)]
+    P --> D[Design\n(opcional)]
+    P --> G[Generate\n(opcional: solo si build=true)]
+    P --> Q[QA/Retry\n(opcional)]
+    G --> A[(artifacts.json + report.md)]
+    Q --> A
+    R --> A
+    C --> A
+    D --> A
 ```
+
+### Pipelines de imagen (workflows)
+
+- `cm generate`: `CreativeEngine -> GeneratorAgent`
+- `cm campaign-inpaint`: prompts coherentes + inpainting (con coherencia opcional)
+- `cm campaign-refs`: base escena+producto + overlay de texto por referencia
 
 ## Ejemplos visuales
 
@@ -85,6 +108,7 @@ cp .env.example .env
 # Editar .env:
 # ANTHROPIC_API_KEY=sk-ant-...
 # OPENAI_API_KEY=sk-...
+# LANGSEARCH_API_KEY=ls-...  # Opcional: activa web search de tendencias en ResearchWorker
 # API_KEY=your-secret-key  # Opcional: Requiere X-API-Key header
 
 # 3. Verificar
@@ -174,7 +198,7 @@ cm campaign-refs mi-marca -p producto.png -s escena.png -f fuente.png --days 3 -
 
 ```bash
 # Crear plan desde lenguaje natural
-cm plan-create mi-marca "3 posts promocionales para hamburguesas 2x1"
+cm plan-create "3 posts promocionales para hamburguesas 2x1" --brand mi-marca
 
 # Listar planes
 cm plan-list
@@ -193,6 +217,18 @@ cm plan-execute <plan_id>
 
 Comando mínimo para demostrar arquitectura Orchestrator + Specialists con bajo overhead.
 El `Strategist` (LLM) decide la secuencia de workers (con fallback determinístico si no hay API key).
+En modo build, el copy (headline/subheadline/theme) se inyecta al prompt por item.
+Si existe `LANGSEARCH_API_KEY`, `ResearchWorker` agrega señales de web search automáticamente.
+
+Política (fallback) de delegación dinámica:
+
+- `research`: se ejecuta si faltan referencias de estilo (no `style_ref` y no `brands/<marca>/references/*`) o si el pedido menciona tendencias/inspiración
+- `copy`: se ejecuta solo si `include_text=true` (por defecto, se apaga si el pedido dice "sin texto"/"sin copy")
+- `design`: se ejecuta para builds (coherencia visual)
+- `generate`: se ejecuta solo si `build=true`
+- `qa`: se ejecuta solo si `build=true` y `max_retries>0`
+
+Nota: en UI/WS el flujo natural es conversacional. El build real se dispara cuando el usuario confirma (`/build`, `ok`, `dale`, etc.).
 
 ```bash
 # Comando simple: orquesta todo (autodetecta productos y ejecuta build)
@@ -400,8 +436,8 @@ No se requiere modificar código.
 | Componente | Costo/imagen |
 |------------|--------------|
 | CreativeEngine (Claude Sonnet 4) | ~$0.005 |
-| Generator (GPT-Image-1.5) | ~$0.040 |
-| **Total (single)** | **~$0.05** |
+| Generator (GPT-Image-1.5) | ~$0.060 |
+| **Total (single)** | **~$0.07** |
 
 Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 llamadas al Generator por día (base + overlay).
 

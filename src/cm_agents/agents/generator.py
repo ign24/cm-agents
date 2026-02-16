@@ -1,4 +1,4 @@
-"""Agente 3: Generator - Genera imágenes con GPT-5.2."""
+"""Generator Agent - Genera imágenes con GPT-Image (Responses API)."""
 
 import asyncio
 import base64
@@ -41,7 +41,7 @@ SIZE_MAPPINGS = {
 
 
 class GeneratorAgent(BaseAgent):
-    """Agente que genera imágenes usando GPT-5.2 de OpenAI."""
+    """Agente que genera imágenes usando GPT-Image de OpenAI (Responses API)."""
 
     def __init__(self, model: str = "gpt-image-1.5"):
         super().__init__()
