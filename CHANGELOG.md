@@ -6,9 +6,21 @@ Todos los cambios notables al proyecto se documentan en este archivo.
 
 ### Added
 
+- Suite E2E de orquestación en `tests/test_orchestrator_e2e.py` (6 tests) cubriendo:
+  - Flujo `OrchestratorCampaignService` -> workers (`research`, `copy`, `design`, `generate`, `qa`).
+  - Decisiones dinámicas run/skip (`build=false`, `sin texto`, `tendencias`, `style_ref`).
+  - Validación de `artifacts.json` y `report.md`.
+  - Mocks de Anthropic/OpenAI para ruta Responses API sin llamadas reales.
+
 ### Changed
 
+- Documentación actualizada a **93 tests** (README y AGENTS).
+- Se actualizó la sección de knowledge base en README para listar todos los JSON activos:
+  `design_2026.json`, `copy_templates.json`, `industry_insights.json`, `marketing_calendar.json`.
+
 ### Fixed
+
+- Diagrama Mermaid en README ("Strategist como Orquestador") corregido para compatibilidad de render en GitHub.
 
 ---
 
