@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="Abrir o cerrar panel lateral"
           />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <Logo size="sm" />
+          <Logo size="sm" className="ml-auto" />
         </header>
         <div className="flex flex-1 flex-col overflow-auto">
           {children}

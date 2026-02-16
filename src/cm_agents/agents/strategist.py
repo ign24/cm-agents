@@ -1100,7 +1100,7 @@ class StrategistAgent:
 
     def _enrich_brand_context(self, brand: Brand, brand_dir: Path) -> dict:
         """Enrich brand context with additional information (products, campaigns, etc.).
-        Products use brand_dir.name (slug) for path: products/{slug}/{product}/.
+        Products use brand_dir.name (slug) for path: brands/{slug}/products/{product}/.
         """
         context = {
             "products": [],
@@ -1109,14 +1109,13 @@ class StrategistAgent:
             "has_assets": False,
         }
 
-        # Load products: products/{brand_slug}/{product_slug}/
+        # Load products: brands/{brand_slug}/products/{product_slug}/ (fallback legacy products/{brand_slug}/)
         brand_slug = brand_dir.name
-        products_dir = Path("products") / brand_slug
-        if products_dir.exists():
-            for product_dir in products_dir.iterdir():
-                if product_dir.is_dir():
-                    product_file = product_dir / "product.json"
-                    if product_file.exists():
+        product_roots = [brand_dir / "products", Path("products") / brand_slug]
+        for products_dir in product_roots:
+            if products_dir.exists():
+                for product_dir in products_dir.iterdir():
+                    if product_dir.is_dir():
                         try:
                             from ..models.product import Product
 
@@ -1127,15 +1126,18 @@ class StrategistAgent:
                                 has_photos = p.exists()
                             except ValueError:
                                 pass
-                            context["products"].append(
-                                {
-                                    "name": product.name,
-                                    "slug": product_dir.name,
-                                    "price": product.price,
-                                    "category": product.category,
-                                    "has_photos": has_photos,
-                                }
-                            )
+                            if not any(
+                                p.get("slug") == product_dir.name for p in context["products"]
+                            ):
+                                context["products"].append(
+                                    {
+                                        "name": product.name,
+                                        "slug": product_dir.name,
+                                        "price": product.price,
+                                        "category": product.category,
+                                        "has_photos": has_photos,
+                                    }
+                                )
                         except Exception:
                             pass  # Skip invalid products
 
@@ -1219,7 +1221,7 @@ Trabajás dentro de CM-Agents, un sistema que genera imágenes de productos para
 **Flujo del Sistema:**
 1. PLAN Mode: Creás planes de contenido con items (producto, tamaño, estilo, copy)
 2. BUILD Mode: El sistema ejecuta automáticamente cuando aprobás el plan
-3. Pipeline: Extractor → Designer → Generator (3 agentes especializados)
+3. Pipeline: CreativeEngine → GeneratorAgent (flujo principal de generación)
 4. Variantes: Podés generar múltiples variantes por item (1-10) con diferentes composiciones/iluminación
 
 **Capacidades Técnicas (para explicar si el usuario pregunta):**
@@ -1236,10 +1238,10 @@ Trabajás dentro de CM-Agents, un sistema que genera imágenes de productos para
 
 ## Requisitos del Pipeline de Generación (Build) — Lo que el siguiente agente NECESITA
 
-Cuando el usuario apruebe el plan, el **GenerationPipeline** (Extractor → Designer → Generator) va a ejecutarlo. Para que no falle, cada item del plan debe tener:
+Cuando el usuario apruebe el plan, el **GenerationPipeline** (CreativeEngine → GeneratorAgent) va a ejecutarlo. Para que no falle, cada item del plan debe tener:
 
 1. **product** = slug de un producto que EXISTA en `products/{marca}/{product}/` con:
-   - `product.json` (name, price, description; `visual_description` opcional pero mejora resultados)
+   - (Opcional) `product.json` para metadata más rica
    - **Al menos una foto** en `photos/` (el Generador la usa para replicar el producto de forma exacta)
 
 2. **Referencia de estilo** (una de estas):
@@ -1247,7 +1249,7 @@ Cuando el usuario apruebe el plan, el **GenerationPipeline** (Extractor → Desi
    - Imágenes adjuntas del usuario
    - O que exista en `brands/{marca}/references/` o en las fotos del producto
 
-3. **Marca** = slug del directorio en `brands/` (ej: resto-mario)
+3. **Marca** = slug del directorio en `brands/` (ej: mi-marca)
 
 4. **Industria** en la marca (para Designer y recomendaciones de estilo)
 
@@ -1262,7 +1264,7 @@ Pedile al usuario exactamente lo que el pipeline espera:
    "Para armar el plan bien, necesito el **tipo de negocio/industria** (ej: food_restaurant, retail, pharmacy, wine_spirits). ¿Podés completarlo en brand.json o decímelo?"
 
 3. **Si no hay productos con fotos en products/{marca}/:**
-   "Para generar las imágenes, el siguiente paso necesita **productos configurados**: cada uno en products/{marca}/&lt;producto&gt;/ con product.json y **al menos una foto en photos/** (el generador la usa para replicar el producto). ¿Tenés productos cargados? Si no, crealos ahí con esa estructura."
+    "Para generar las imágenes, el siguiente paso necesita **productos configurados**: cada uno en products/{marca}/&lt;producto&gt;/ con **al menos una foto en photos/** (el generador la usa para replicar el producto). `product.json` es opcional. ¿Tenés productos cargados?"
 
 4. **Si no hay referencia de estilo (Pinterest, adjunto o en references/):**
    "¿Tenés una imagen de referencia de estilo (Pinterest, mockup) o querés que busque en Pinterest? Si no, hace falta al menos una en brands/{marca}/references/ o en las fotos del producto."
@@ -1287,44 +1289,22 @@ Pedile al usuario exactamente lo que el pipeline espera:
 
 **Orquestación de Agentes (CRÍTICO - Sos el Orquestador Principal):**
 
-Cuando el usuario pide buscar en Pinterest:
-1. **Detectás** la solicitud ("busca en pinterest", "pinterest", etc.)
-2. **Extraés** el query de búsqueda del mensaje
-3. **Usás MCPClientService.search_pinterest(query, limit=5, download=True)**
-   - El MCP descarga automáticamente las imágenes a `references/`
-   - Recibís resultados con URLs y metadata
-4. **Agregás** las URLs a los items del plan (`item.reference_urls`)
-5. **Cuando se aprueba el plan**, el GenerationPipeline:
-    - Busca las imágenes descargadas en `references/` (más recientes primero)
-    - CreativeEngine.create_single_prompt() → Genera el prompt (estilo + producto)
-    - GeneratorAgent.generate_with_image_refs() → Genera imágenes finales
+Tu trabajo es decidir **cuándo ejecutar cada worker** según el contexto:
+- Research (si falta dirección visual o hay que justificar estilo)
+- Copy (campañas con texto/copy comercial)
+- Design (siempre que haya que producir prompts visuales)
+- Generate (solo en BUILD mode o cuando el usuario pide generar explícitamente)
+- QA (después de generar, para validar resultado/reintentos)
 
-**Flujo Completo de Orquestación:**
-```
-Usuario: "busca en pinterest ideas para cyber monday"
-  ↓
-StrategistAgent:
-  1. Detecta "pinterest" → _should_search_pinterest() = True
-  2. Extrae query: "ideas para cyber monday"
-  3. Llama: MCPClientService.search_pinterest("ideas para cyber monday", limit=5, download=True)
-  4. MCP descarga imágenes a references/
-  5. Recibe resultados con URLs
-  6. Crea ContentPlan con item.reference_urls = [url1, url2, ...]
-  ↓
-Usuario aprueba → BUILD Mode
-  ↓
-GenerationPipeline.execute_generation():
-  1. Lee item.reference_urls
-  2. Busca archivos descargados en references/ (más recientes)
-  3. CreativeEngine.create_single_prompt(style_ref, product_ref, brand, product) → GenerationPrompt
-  4. GeneratorAgent.generate_with_image_refs(prompt, [style_ref, product_ref, logo]) → Imagen final
-```
+**Regla de decisión operativa:**
+- Si el usuario solo pide estrategia/plan: quedate en PLAN mode
+- Si el usuario confirma ejecución ("genera", "ejecuta", "build"): pasar a BUILD mode
+- En BUILD mode priorizá ejecución + progreso + resultado concreto
 
 **IMPORTANTE - Tu Rol como Orquestador:**
-- NO solo creás planes, **orquestás todo el flujo**
-- Cuando detectás Pinterest, **buscás y descargás automáticamente**
-- Las referencias se pasan al pipeline **automáticamente** cuando se aprueba
-- Explicá al usuario qué estás haciendo: "Buscando en Pinterest...", "Encontré 5 referencias..."
+- NO solo creás planes, **orquestás el flujo completo**
+- Explicá qué worker ejecutás y por qué (breve y claro)
+- No inventes workers que el sistema no tenga
 
 **Detección Automática:**
 - "variantes", "varias opciones" → Sugerir múltiples variantes (4 es buen default)
@@ -1494,23 +1474,24 @@ Ejemplo de respuesta cuando falta contexto:
                 "No se encontró el directorio de la marca en brands/. Verificá que exista la carpeta de la marca.",
             )
 
-        # Productos: el pipeline necesita products/{slug}/{product}/ con product.json y al menos una foto
+        # Productos: el pipeline necesita brands/{slug}/products/{product}/ con al menos una foto
         brand_slug = brand_dir.name
-        products_dir = Path("products") / brand_slug
-        if not products_dir.exists():
+        product_roots = [brand_dir / "products", Path("products") / brand_slug]
+        existing_roots = [p for p in product_roots if p.exists()]
+        if not existing_roots:
             return False, (
-                f"Para generar imágenes, el pipeline necesita **productos** en products/{brand_slug}/ "
-                "con product.json y al menos una foto en photos/. ¿Tenés productos cargados? "
-                "Si no, crealos con: products/{0}/<producto>/product.json y photos/."
+                f"Para generar imágenes, el pipeline necesita **productos** en brands/{brand_slug}/products/ "
+                "con al menos una foto en photos/. ¿Tenés productos cargados? "
+                "Si no, crealos con: brands/{0}/products/<producto>/photos/<foto>.png"
             ).format(brand_slug)
 
-        subdirs = [
-            d for d in products_dir.iterdir() if d.is_dir() and (d / "product.json").exists()
-        ]
+        subdirs = []
+        for root in existing_roots:
+            subdirs.extend([d for d in root.iterdir() if d.is_dir()])
         if not subdirs:
             return False, (
-                f"No hay productos con product.json en products/{brand_slug}/. "
-                "El pipeline necesita al menos un producto con product.json y fotos en photos/."
+                f"No hay productos en brands/{brand_slug}/products/ (ni ruta legacy). "
+                "El pipeline necesita al menos un producto con fotos en photos/."
             )
 
         from ..models.product import Product
@@ -1526,7 +1507,7 @@ Ejemplo de respuesta cuando falta contexto:
                 pass
         if not has_any_photos:
             return False, (
-                "Los productos necesitan **al menos una foto** (en photos/ y referenciada en product.json). "
+                "Los productos necesitan **al menos una foto** en photos/. "
                 "El generador la usa para replicar el producto. Agregá fotos a los productos."
             )
 

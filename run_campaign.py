@@ -289,7 +289,7 @@ def main():
         default="direct",
         help="Modo de generación (default: direct)",
     )
-    parser.add_argument("--brand", default="resto-mario", help="Slug de la marca")
+    parser.add_argument("--brand", default="mi-marca", help="Slug de la marca")
     parser.add_argument("--campaign", default="Black Friday", help="Nombre de la campaña")
     parser.add_argument("--days", type=int, default=3, help="Número de días")
     parser.add_argument("--product-image", help="Ruta a imagen del producto (modo direct)")

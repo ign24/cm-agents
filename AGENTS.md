@@ -263,6 +263,10 @@ cm plan-show <plan_id>                # Ver detalles de un plan
 cm plan-approve <plan_id>             # Aprobar plan para ejecución
 cm plan-execute <plan_id>             # Ejecutar generación de un plan aprobado
 
+# Orquestación LLM (CLI)
+cm agent-chat --brand <marca>         # Chat ida y vuelta con Strategist
+cm agent-campaign --brand <marca> [--message <pedido>]  # Orchestrator -> workers
+
 # Herramientas
 cm styles [categoria]            # Listar estilos de diseño
 cm product-list <marca>          # Listar productos
@@ -376,15 +380,14 @@ Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 l
 }
 ```
 
-### products/{marca}/{producto}/product.json
-```json
-{
-  "name": "Nombre Producto",
-  "description": "Descripción",
-  "price": "$X.XX",
-  "category": "food|beverages|pharmacy|..."
-}
+### brands/{marca}/products/{producto}/
+Estructura mínima para que el pipeline pueda generar:
+
+```text
+brands/{marca}/products/{producto}/photos/<foto>.png
 ```
+
+`product.json` es opcional. Si existe, aporta metadata extra (name/price/category).
 
 ## Notas Importantes para Modificaciones
 
@@ -413,6 +416,9 @@ brands/{marca}/
 │   └── icon.png            # Icono/favicon
 ├── fonts/                  # Fuentes de la marca
 ├── references/             # Referencias visuales preferidas
+├── products/               # Productos de la marca (estructura preferida)
+│   └── {producto}/
+│       └── photos/
 └── campaigns/              # Campañas publicitarias
     └── promo-verano/
         ├── campaign.json   # Configuración de campaña
@@ -461,7 +467,7 @@ El StrategistAgent **carga y enriquece el contexto de marca** antes de generar p
 
 1. **Carga automática de contexto**:
    - Información básica de `brand.json` (nombre, industria, voz, valores, colores, estilos)
-   - Productos disponibles (desde `products/{marca}/`)
+   - Productos disponibles (desde `brands/{marca}/products/`, con fallback a `products/{marca}/`)
    - Campañas activas (desde `brands/{marca}/campaigns/`)
    - Assets disponibles (logo, iconos)
 
@@ -479,7 +485,7 @@ El Strategist pregunta lo que el **GenerationPipeline** necesita para no fallar:
 
 - **Marca (slug)**: `brands/{slug}/` — se pasa `brand_slug` desde la API.
 - **Industria**: en `brand.json` (CreativeEngine y estilos).
-- **Productos con fotos**: `products/{marca}/{producto}/` con `product.json` y `photos/` (el Generador replica el producto desde la foto).
+- **Productos con fotos**: `brands/{marca}/products/{producto}/photos/` (el Generador replica el producto desde la foto). `product.json` es opcional.
 - **Referencia de estilo**: Pinterest, imágenes adjuntas o `brands/{marca}/references/`.
 
 **Imágenes de referencia**:
@@ -495,7 +501,7 @@ Chat REST simple con StrategistAgent.
 ```json
 {
   "message": "Crear post para el día del padre",
-  "brand": "resto-mario"
+  "brand": "mi-marca"
 }
 ```
 
@@ -507,7 +513,7 @@ Crear plan de contenido desde lenguaje natural.
 ```json
 {
   "prompt": "3 posts promocionales para hamburguesas 2x1",
-  "brand": "resto-mario",
+  "brand": "mi-marca",
   "campaign": "promo-verano"
 }
 ```
@@ -521,6 +527,11 @@ Chat en tiempo real con contexto de conversación.
 - `{"type": "ping", "data": {}}` → `{"type": "pong"}`
 - `{"type": "chat", "data": {"content": "...", "brand": "..."}}` → Stream de respuesta
 - `{"type": "approve_plan", "data": {"plan_id": "...", "item_ids": [...]}}` → Confirmación
+- `{"type": "build_orchestrator", "data": {"brand": "...", "request": "..."}}` → Ejecuta OrchestratorCampaignService real
+
+Eventos relevantes para UI:
+- `build_started` (inicio de ejecución de workers)
+- `build_completed` (resumen final: run_id, imágenes generadas, errores)
 
 ### Seguridad (`security.py`)
 

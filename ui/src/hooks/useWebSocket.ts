@@ -5,7 +5,18 @@ import { useEffect, useRef, useState, useCallback } from "react";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
 
 export interface WSMessage {
-  type: "chat" | "plan" | "progress" | "error" | "pong";
+  type:
+    | "chat"
+    | "plan"
+    | "progress"
+    | "error"
+    | "pong"
+    | "mode_changed"
+    | "build_started"
+    | "build_completed"
+    | "plan_approved"
+    | "validation_warning"
+    | "build_blocked";
   data: Record<string, unknown>;
   timestamp?: string;
 }
@@ -107,6 +118,13 @@ export function useWebSocket({
     send("ping", {});
   }, [send]);
 
+  const sendBuildOrchestrator = useCallback(
+    (brand?: string, request?: string) => {
+      send("build_orchestrator", { brand, request });
+    },
+    [send]
+  );
+
   useEffect(() => {
     connect();
     return () => disconnect();
@@ -128,6 +146,7 @@ export function useWebSocket({
     lastMessage,
     send,
     sendChat,
+    sendBuildOrchestrator,
     connect,
     disconnect,
   };

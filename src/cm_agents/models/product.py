@@ -25,15 +25,41 @@ class Product(BaseModel):
 
     @classmethod
     def load(cls, product_dir: Path) -> "Product":
-        """Carga un producto desde su directorio."""
+        """Carga un producto desde su directorio.
+
+        Si no existe `product.json`, intenta modo fallback leyendo fotos en `photos/`.
+        """
         product_file = product_dir / "product.json"
-        if not product_file.exists():
-            raise FileNotFoundError(f"No se encontró product.json en {product_dir}")
+        if product_file.exists():
+            with open(product_file, encoding="utf-8") as f:
+                data = json.load(f)
+            return cls(**data)
 
-        with open(product_file, encoding="utf-8") as f:
-            data = json.load(f)
+        # Fallback sin product.json: construir producto mínimo desde carpeta/fotos
+        photos_dir = product_dir / "photos"
+        photo_paths: list[str] = []
+        if photos_dir.exists():
+            for pattern in ("*.png", "*.jpg", "*.jpeg", "*.webp"):
+                for p in sorted(photos_dir.glob(pattern)):
+                    photo_paths.append(str(Path("photos") / p.name))
 
-        return cls(**data)
+        if not photo_paths:
+            raise FileNotFoundError(
+                f"No se encontró product.json ni fotos en {photos_dir} para {product_dir}"
+            )
+
+        slug_name = product_dir.name.replace("-", " ").replace("_", " ").strip()
+        inferred_name = " ".join(w.capitalize() for w in slug_name.split()) or product_dir.name
+
+        return cls(
+            name=inferred_name,
+            price="N/A",
+            description="",
+            visual_description="",
+            photos=photo_paths,
+            category="general",
+            tags=[],
+        )
 
     def save(self, product_dir: Path) -> None:
         """Guarda el producto en su directorio."""

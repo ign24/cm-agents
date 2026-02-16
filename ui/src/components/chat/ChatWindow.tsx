@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Play } from "lucide-react";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { ModeToggle } from "./ModeToggle";
@@ -61,12 +64,18 @@ export function ChatWindow() {
             content: data.message,
           });
         }
+        if (message.type === "build_started") {
+          setIsLoading(true);
+        }
+        if (message.type === "build_completed") {
+          setIsLoading(false);
+        }
       }
     },
     [addMessage, setIsLoading]
   );
 
-  const { isConnected, sendChat } = useWebSocket({
+  const { isConnected, sendChat, sendBuildOrchestrator } = useWebSocket({
     sessionId,
     onMessage: handleMessage,
   });
@@ -87,6 +96,15 @@ export function ChatWindow() {
     [addMessage, sendChat, selectedBrand, setIsLoading, workflowMode]
   );
 
+  const handleBuild = useCallback(() => {
+    addMessage({
+      role: "user",
+      content: "/build",
+    });
+    setIsLoading(true);
+    sendBuildOrchestrator(selectedBrand || undefined);
+  }, [addMessage, selectedBrand, sendBuildOrchestrator, setIsLoading]);
+
   // Auto-scroll to bottom on new messages with improved behavior
   useEffect(() => {
     if (scrollRef.current && messages.length > 0) {
@@ -105,18 +123,38 @@ export function ChatWindow() {
     <Card className="flex flex-col min-h-[400px] flex-1">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-card/50 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="min-w-0">
             <h2 className="font-semibold text-lg">Chat con CM Agents</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               {selectedBrand
                 ? `Marca: ${selectedBrand}`
                 : "Selecciona una marca para comenzar"}
             </p>
+            <div className="mt-2 flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px] font-medium">
+                Orchestrator listo
+              </Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {workflowMode.toUpperCase()}
+              </Badge>
+            </div>
           </div>
           <ModeToggle />
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleBuild}
+            disabled={!isConnected || isLoading || !selectedBrand}
+            title="Ejecutar build real con el orquestador"
+            className="h-11 min-w-11"
+            aria-label="Ejecutar build real"
+          >
+            <Play className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+            Build
+          </Button>
           <div className="relative">
             <span
               className={`w-2.5 h-2.5 rounded-full block transition-all duration-300 ${
@@ -147,9 +185,13 @@ export function ChatWindow() {
       {/* Input */}
       <div className="border-t p-4 bg-card/50 backdrop-blur-sm">
         {isLoading && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
+          <div
+            className="mb-2 flex items-center gap-2 text-xs text-muted-foreground animate-in fade-in slide-in-from-bottom-2"
+            role="status"
+            aria-live="polite"
+          >
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span>El asistente está escribiendo...</span>
+            <span>El asistente está escribiendo…</span>
           </div>
         )}
         <MessageInput onSend={handleSend} disabled={!isConnected || isLoading} />

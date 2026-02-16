@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/stores/chatStore";
-import { Bot, User, AlertCircle } from "lucide-react";
+import { Bot, User, AlertCircle, FileText } from "lucide-react";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -12,7 +12,7 @@ export function MessageList({ messages }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-12 text-center animate-in fade-in duration-500">
-        <Bot className="w-12 h-12 text-muted-foreground mb-4 animate-in zoom-in duration-500 delay-100" />
+        <Bot className="w-12 h-12 text-muted-foreground mb-4 animate-in zoom-in duration-500 delay-100" aria-hidden="true" />
         <h3 className="font-medium animate-in slide-in-from-bottom-4 duration-500 delay-200">
           ¡Hola! Soy tu asistente de CM Agents
         </h3>
@@ -122,6 +122,8 @@ function MessageBubble({ message, isLatest = false }: MessageBubbleProps) {
                   <img
                     src={img}
                     alt={`Imagen de referencia ${i + 1}`}
+                    width={200}
+                    height={200}
                     className="max-w-[200px] max-h-[200px] object-cover"
                     loading="lazy"
                   />
@@ -132,14 +134,39 @@ function MessageBubble({ message, isLatest = false }: MessageBubbleProps) {
 
           {/* Show plan preview if present */}
           {message.plan && (
-            <div className="mt-3 p-3 bg-background/50 rounded-md text-sm border border-border/50 hover:bg-background/70 transition-colors cursor-pointer">
+            <div className="mt-3 p-3 bg-background/60 rounded-md text-sm border border-border/60 transition-colors cursor-pointer">
               <p className="font-medium flex items-center gap-2">
-                <span>📋</span>
+                <FileText className="w-4 h-4" aria-hidden="true" />
                 Plan creado
               </p>
-              <p className="text-xs opacity-70 mt-1">
-                Click para ver detalles
-              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                {(() => {
+                  const plan = message.plan as {
+                    id?: string;
+                    brand?: string;
+                    estimated_cost?: number;
+                    items?: unknown[];
+                  };
+                  const itemsCount = Array.isArray(plan.items) ? plan.items.length : 0;
+                  return (
+                    <>
+                      <span className="text-muted-foreground">ID</span>
+                      <span className="font-medium truncate">{plan.id || "-"}</span>
+                      <span className="text-muted-foreground">Items</span>
+                      <span className="font-medium">{itemsCount}</span>
+                      <span className="text-muted-foreground">Marca</span>
+                      <span className="font-medium truncate">{plan.brand || "-"}</span>
+                      <span className="text-muted-foreground">Costo est.</span>
+                      <span className="font-medium">
+                        {typeof plan.estimated_cost === "number"
+                          ? `$${plan.estimated_cost.toFixed(2)}`
+                          : "-"}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+              <p className="text-xs opacity-75 mt-2">Confirmá con /build o "ok" para ejecutar.</p>
             </div>
           )}
         </div>

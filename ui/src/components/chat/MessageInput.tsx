@@ -18,8 +18,9 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const { workflowMode } = useChatStore();
   
   const modePlaceholders = {
-    plan: "Planificá contenido... (Enter para enviar, Shift+Enter para nueva línea, Tab para cambiar modo)",
-    build: "Generá imágenes... (Enter para enviar, Shift+Enter para nueva línea, Tab para cambiar modo)",
+    plan: "Contá el objetivo de campaña… (Enter enviar, Shift+Enter nueva línea, Tab cambia modo)",
+    build:
+      "Confirmá ejecución (ej: /build u 'ok') o pedí ajustes… (Enter enviar, Shift+Enter nueva línea)",
   };
 
   const handleSend = () => {
@@ -75,6 +76,9 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
               <img
                 src={img}
                 alt={`Vista previa ${i + 1}`}
+                width={64}
+                height={64}
+                loading="lazy"
                 className="w-16 h-16 object-cover rounded-md border border-border/50 transition-transform group-hover:scale-105"
               />
               <button
@@ -102,9 +106,11 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
             }}
             onKeyDown={handleKeyDown}
             placeholder={
-              disabled ? "Conectando..." : modePlaceholders[workflowMode]
+              disabled ? "Conectando…" : modePlaceholders[workflowMode]
             }
             disabled={disabled}
+            name="chatMessage"
+            autoComplete="off"
             className="min-h-[44px] max-h-[120px] resize-none pr-10 transition-all duration-200 focus:ring-2 focus:ring-ring"
             rows={1}
             aria-label="Mensaje"
@@ -154,7 +160,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         id="input-helper"
         className="text-xs text-muted-foreground animate-in fade-in duration-200"
       >
-        Tip: Podés subir imágenes de referencia de Pinterest para inspirar el diseño
+        Tip: En modo BUILD, el orquestador ejecuta workers reales al confirmar.
       </p>
     </div>
   );

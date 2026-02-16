@@ -120,16 +120,16 @@ bun run build
 
 ```bash
 # Con imagen del producto real (RECOMENDADO)
-cm generate sprite resto-mario references/estilo.jpg -p references/sprite.webp
+cm generate sprite mi-marca references/estilo.jpg -p references/sprite.webp
 
 # Con estilo específico
-cm generate sprite resto-mario ref.jpg -p producto.webp --style minimal_clean
+cm generate sprite mi-marca ref.jpg -p producto.webp --style minimal_clean
 
 # Múltiples tamaños (feed + story)
-cm generate sprite resto-mario ref.jpg -p producto.webp -s feed -s story
+cm generate sprite mi-marca ref.jpg -p producto.webp -s feed -s story
 
 # Asociar a una campaña
-cm generate sprite resto-mario ref.jpg -p producto.webp --campaign promo-verano
+cm generate sprite mi-marca ref.jpg -p producto.webp --campaign promo-verano
 ```
 
 ### Gestión de Marcas
@@ -142,23 +142,23 @@ cm brand-create mi-tienda
 cm brand-list
 
 # Ver configuración completa de una marca
-cm brand-show resto-mario
+cm brand-show mi-marca
 ```
 
 ### Gestión de Campañas
 
 ```bash
 # Crear campaña
-cm campaign-create resto-mario promo-verano-2026
+cm campaign-create mi-marca promo-verano-2026
 
 # Listar campañas de una marca
-cm campaign-list resto-mario
+cm campaign-list mi-marca
 
 # Ver detalles de campaña
-cm campaign-show resto-mario promo-verano-2026
+cm campaign-show mi-marca promo-verano-2026
 
 # Ejecutar campaña con inpainting
-cm campaign-inpaint resto-mario promo-verano-2026
+cm campaign-inpaint mi-marca promo-verano-2026
 ```
 
 ### Campaña por referencias (3 referencias)
@@ -166,15 +166,15 @@ cm campaign-inpaint resto-mario promo-verano-2026
 Flujo con **1 producto + 1 escena + 1 fuente**: genera una imagen por día con variación automática de ángulo del producto (réplica exacta) y agrega texto por día usando la referencia de tipografía. Por defecto 3 días (teaser, main_offer, last_chance).
 
 ```bash
-cm campaign-refs resto-mario -p foto-producto.jpg -s escena-fondo.png -f tipografia-muestra.png
-cm campaign-refs resto-mario -p producto.png -s escena.png -f fuente.png --days 3 --output outputs/mi-campana
+cm campaign-refs mi-marca -p foto-producto.jpg -s escena-fondo.png -f tipografia-muestra.png
+cm campaign-refs mi-marca -p producto.png -s escena.png -f fuente.png --days 3 --output outputs/mi-campana
 ```
 
 ### Planes de Contenido (StrategistAgent)
 
 ```bash
 # Crear plan desde lenguaje natural
-cm plan-create resto-mario "3 posts promocionales para hamburguesas 2x1"
+cm plan-create mi-marca "3 posts promocionales para hamburguesas 2x1"
 
 # Listar planes
 cm plan-list
@@ -188,6 +188,57 @@ cm plan-approve <plan_id>
 # Ejecutar generación de un plan aprobado
 cm plan-execute <plan_id>
 ```
+
+### Orchestrator MVP (CLI)
+
+Comando mínimo para demostrar arquitectura Orchestrator + Specialists con bajo overhead.
+El `Strategist` (LLM) decide la secuencia de workers (con fallback determinístico si no hay API key).
+
+```bash
+# Comando simple: orquesta todo (autodetecta productos y ejecuta build)
+cm agent-campaign --brand mi-marca
+
+# Input dinámico del usuario (Strategist traduce y ejecuta)
+cm agent-campaign --brand mi-marca --message "campaña 3 días para San Valentín"
+
+# Opcional: objetivo, días o productos específicos
+cm agent-campaign --brand mi-marca --objective "campaña de lanzamiento" --days 3
+cm agent-campaign --brand mi-marca --products producto-a,producto-b --max-retries 1
+
+# Forzar que SIEMPRE use LLM (sin fallback)
+cm agent-campaign --brand mi-marca --message "promo 2x1" --require-llm-orchestrator
+```
+
+### Agent Chat (ida y vuelta)
+
+```bash
+# Conversación iterativa con Strategist
+cm agent-chat --brand mi-marca
+
+# Dentro del chat:
+# - escribís pedido en lenguaje natural
+# - Strategist pregunta lo que falta
+# - cuando aprobás: /build (o "ok"/"dale") para ejecutar build real
+```
+
+### UI (WebSocket) con Orchestrator
+
+- El chat en `ui/` ya soporta build real desde la interfaz.
+- Botón `Build` en el header del chat -> envía `build_orchestrator` por WebSocket.
+- También funciona por mensaje de aprobación (`ok`, `dale`, `ejecuta`) cuando hay pedido pendiente.
+- El backend responde con eventos `build_started` y `build_completed`.
+
+Artifacts de cada corrida:
+
+- `outputs/agent_runs/<run_id>/artifacts.json`
+- `outputs/agent_runs/<run_id>/report.md`
+
+Dentro de `artifacts.json` se guarda:
+
+- `worker_plan.sequence` (orden decidido por el orquestador)
+- `worker_plan.mode` (`llm` o `fallback`)
+- `input_translation` (cómo el Strategist tradujo el mensaje dinámico)
+- `orchestration_trace` (pasos y QA por intento)
 
 ### Estilos disponibles
 
@@ -206,11 +257,13 @@ cm styles food
 ### Otros comandos
 
 ```bash
-cm product-list resto-mario     # Listar productos
+cm product-list mi-marca        # Listar productos
 cm status                       # Estado del sistema
 cm estimate                     # Estimar costos
 cm pinterest-search <query>     # Buscar imágenes en Pinterest (MCP)
 cm mcp-tools <server>           # Listar tools de un servidor MCP
+cm agent-chat --brand mi-marca  # Chat interactivo con Strategist
+cm agent-campaign ...           # Orchestrator->Workers (MVP)
 cm serve [--reload]             # Iniciar API server
 ```
 
@@ -219,21 +272,20 @@ cm serve [--reload]             # Iniciar API server
 ```
 cm-agents/
 ├── brands/                      # Configuraciones de marcas
-│   └── resto-mario/
+│   └── mi-marca/
 │       ├── brand.json           # Identidad de marca completa
 │       ├── assets/              # Logos e iconos
 │       │   ├── logo.png
 │       │   └── logo-white.png
 │       ├── fonts/               # Fuentes de la marca
 │       ├── references/          # Referencias de estilo
+│       ├── products/            # Productos de la marca (estructura preferida)
+│       │   └── demo-product/
+│       │       └── photos/
 │       └── campaigns/           # Campañas publicitarias
 │           └── promo-verano/
 │               ├── campaign.json
 │               └── outputs/
-├── products/                    # Productos por marca
-│   └── resto-mario/
-│       └── sprite/
-│           └── product.json
 ├── references/                  # Referencias globales
 ├── knowledge/                   # Base de conocimiento
 │   └── design_2026.json         # Estilos y guidelines
@@ -241,6 +293,7 @@ cm-agents/
 │   ├── brand_template.json
 │   └── campaign_template.json
 ├── outputs/                     # Imágenes generadas (sin campaña)
+│   └── agent_runs/              # Artefactos de orquestación por run
 ├── ui/                          # Frontend Next.js 16
 └── src/cm_agents/
     ├── agents/                  # CreativeEngine, Generator, Strategist
@@ -303,7 +356,16 @@ cm-agents/
 }
 ```
 
-### product.json
+### Producto (opcional product.json)
+
+Estructura mínima requerida para generar:
+
+```text
+brands/<marca>/products/<producto>/photos/<foto>.png
+```
+
+`product.json` es opcional. Si existe, mejora metadata (nombre/precio/categoría):
+
 ```json
 {
   "name": "Sprite",

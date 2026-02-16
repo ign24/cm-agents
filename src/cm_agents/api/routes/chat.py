@@ -10,6 +10,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ...agents.strategist import StrategistAgent
 from ...models.brand import Brand
+from ...services.agent_campaign import OrchestratorCampaignService
 from ..config import settings
 from ..routes.generate import execute_generation
 from ..routes.plans import get_plans_dir
@@ -31,9 +32,78 @@ router = APIRouter()
 
 # Initialize strategist agent
 strategist = StrategistAgent(knowledge_dir=Path(settings.KNOWLEDGE_DIR))
+orchestrator = OrchestratorCampaignService(knowledge_dir=Path(settings.KNOWLEDGE_DIR))
 
 # In-memory conversation storage (replace with persistent storage later)
 conversations: dict[str, list[ChatMessage]] = {}
+pending_build_requests: dict[str, str] = {}
+session_brands: dict[str, str] = {}
+
+
+def _is_build_confirmation(content: str) -> bool:
+    msg = content.strip().lower()
+    confirmations = {
+        "/build",
+        "ok",
+        "dale",
+        "aprobado",
+        "apruebo",
+        "si",
+        "sí",
+        "genera",
+        "ejecuta",
+        "adelante",
+    }
+    return msg in confirmations
+
+
+async def _run_orchestrator_build(session_id: str, brand_slug: str, user_request: str) -> None:
+    """Run real orchestrator build in background and stream status to websocket."""
+    await manager.send_to_session(
+        session_id,
+        {
+            "type": "build_started",
+            "data": {
+                "message": "Orchestrator LLM activado. Ejecutando workers...",
+                "brand": brand_slug,
+            },
+        },
+    )
+
+    try:
+        result = await asyncio.to_thread(
+            orchestrator.run_from_user_input,
+            brand_slug,
+            user_request,
+            None,  # style_ref
+            1,  # max_retries
+            True,  # require_llm_orchestrator
+        )
+        artifacts = result.get("artifacts", {})
+        worker_plan = artifacts.get("worker_plan", {})
+        generated = len([g for g in artifacts.get("generation", []) if "image_path" in g])
+        errors = len([g for g in artifacts.get("generation", []) if "error" in g])
+
+        await manager.send_to_session(
+            session_id,
+            {
+                "type": "build_completed",
+                "data": {
+                    "message": (
+                        f"Build completado. Workers: {', '.join(worker_plan.get('sequence', []))}. "
+                        f"Imágenes: {generated}. Errores: {errors}."
+                    ),
+                    "run_id": result.get("run_id"),
+                    "run_dir": str(result.get("run_dir")),
+                    "generated": generated,
+                    "errors": errors,
+                    "worker_plan": worker_plan,
+                },
+            },
+        )
+    except Exception as e:
+        logger.error(f"Orchestrator build failed: {e}", exc_info=True)
+        await manager.send_error(session_id, f"Error en build real del orquestador: {e}")
 
 
 def _load_brand(brand_slug: str | None) -> Brand | None:
@@ -176,6 +246,9 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 brand_slug = message_data.get("data", {}).get("brand")
                 workflow_mode = message_data.get("data", {}).get("mode", "plan")  # Default to plan
 
+                if brand_slug:
+                    session_brands[session_id] = brand_slug
+
                 if not content and not images:
                     await manager.send_error(session_id, "Empty message")
                     continue
@@ -190,6 +263,32 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     timestamp=datetime.now(),
                 )
                 conversations[session_id].append(user_message)
+
+                # Keep latest non-confirmation request as candidate for orchestrator build
+                if content and not _is_build_confirmation(content):
+                    pending_build_requests[session_id] = content
+
+                # If user confirms build, execute real orchestrator with pending request
+                active_brand = brand_slug or session_brands.get(session_id)
+                if _is_build_confirmation(content):
+                    pending_request = pending_build_requests.get(session_id)
+                    if not active_brand:
+                        await manager.send_error(
+                            session_id,
+                            "Para ejecutar build necesitás seleccionar una marca.",
+                        )
+                        continue
+                    if not pending_request:
+                        await manager.send_error(
+                            session_id,
+                            "No hay pedido pendiente para ejecutar. Enviá primero un pedido de campaña.",
+                        )
+                        continue
+
+                    asyncio.create_task(
+                        _run_orchestrator_build(session_id, active_brand, pending_request)
+                    )
+                    continue
 
                 # Load brand
                 brand = _load_brand(brand_slug)
@@ -302,53 +401,36 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
                 # Auto-generate if user requested it (auto-approve mode)
                 if plan and should_auto_generate:
-                    logger.info(f"Auto-approving and generating content for plan {plan.id}")
-                    try:
-                        # Approve with auto_approve=True to skip strict validation
-                        approved_plan, validation = plan_manager.approve_plan(
-                            plan_id=plan.id, item_ids=None, auto_approve=True
+                    if active_brand := (brand_slug or session_brands.get(session_id)):
+                        logger.info("Auto-triggering real orchestrator build from chat intent")
+                        asyncio.create_task(
+                            _run_orchestrator_build(session_id, active_brand, content)
                         )
-
-                        # Notify approval
-                        await manager.send_to_session(
-                            session_id,
-                            {
-                                "type": "plan_approved",
-                                "data": {
-                                    "plan_id": plan.id,
-                                    "approved_items": "all",
-                                    "auto": True,
-                                    "validation": validation,
-                                },
-                            },
-                        )
-
-                        # Transition to BUILD mode
-                        await manager.send_to_session(
-                            session_id,
-                            {
-                                "type": "mode_changed",
-                                "data": {
-                                    "mode": "build",
-                                    "plan_id": plan.id,
-                                    "message": "Modo BUILD activado - Iniciando generación automática...",
-                                },
-                            },
-                        )
-
-                        # Trigger generation automatically
-                        asyncio.create_task(  # noqa: F823
-                            execute_generation(  # noqa: F823
-                                plan_id=plan.id,
-                                item_ids=None,  # All approved items
-                                session_id=session_id,
-                            )
-                        )
-                    except Exception as e:
-                        logger.error(f"Auto-approval failed: {e}", exc_info=True)
+                    else:
                         await manager.send_error(
-                            session_id, f"Error al aprobar y generar automáticamente: {e}"
+                            session_id,
+                            "Detecté intención de build pero falta marca seleccionada.",
                         )
+
+            elif msg_type == "build_orchestrator":
+                data = message_data.get("data", {})
+                brand_slug = data.get("brand") or session_brands.get(session_id)
+                user_request = data.get("request") or pending_build_requests.get(session_id)
+
+                if not brand_slug:
+                    await manager.send_error(
+                        session_id, "Para build_orchestrator se requiere brand"
+                    )
+                    continue
+                if not user_request:
+                    await manager.send_error(
+                        session_id,
+                        "No hay pedido para ejecutar. Enviá un mensaje de campaña primero.",
+                    )
+                    continue
+
+                asyncio.create_task(_run_orchestrator_build(session_id, brand_slug, user_request))
+                continue
 
             elif msg_type == "approve_plan":
                 # Handle plan approval with validation and transition to BUILD mode

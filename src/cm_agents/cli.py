@@ -59,13 +59,13 @@ def generate(
     Genera una o múltiples imágenes de producto basadas en referencias.
 
     MODO SIMPLE (solo estilo):
-        cm generate sprite resto-mario references/producto_verde.jpg
+        cm generate sprite mi-marca references/producto_verde.jpg
 
     MODO DUAL (estilo + producto) - RECOMENDADO:
-        cm generate sprite resto-mario references/producto_verde.jpg -p references/sprite.webp
+        cm generate sprite mi-marca references/producto_verde.jpg -p references/sprite.webp
 
     CON CAMPAÑA (guarda en carpeta de campaña):
-        cm generate sprite resto-mario ref.jpg -p sprite.webp --campaign promo-verano
+        cm generate sprite mi-marca ref.jpg -p sprite.webp --campaign promo-verano
 
     ESTILOS DISPONIBLES (--style):
         minimal_clean     - Minimalista, fondo limpio, espacio negativo
@@ -284,8 +284,8 @@ def brand_create(
     with open(brand_dir / "brand.json", "w", encoding="utf-8") as f:
         f.write(brand_json)
 
-    # Crear directorio de productos
-    products_dir = Path("products") / name
+    # Crear directorio de productos (estructura preferida dentro de la marca)
+    products_dir = brand_dir / "products"
     products_dir.mkdir(parents=True, exist_ok=True)
 
     console.print(f"\n[green][OK] Marca '{display_name}' creada exitosamente![/green]")
@@ -296,7 +296,7 @@ def brand_create(
     console.print("    fonts/          - Fuentes")
     console.print("    references/     - Referencias de estilo")
     console.print("    campaigns/      - Campañas")
-    console.print(f"  products/{name}/  - Productos")
+    console.print(f"  brands/{name}/products/  - Productos")
     console.print(f"\n[dim]Próximo paso: agrega tu logo en brands/{name}/assets/logo.png[/dim]")
 
 
@@ -308,7 +308,7 @@ def brand_show(
     Muestra la configuración completa de una marca.
 
     Ejemplo:
-        cm brand-show resto-mario
+        cm brand-show mi-marca
     """
     from rich.panel import Panel
 
@@ -403,7 +403,7 @@ def campaign_create(
     Crea una nueva campaña para una marca.
 
     Ejemplo:
-        cm campaign-create resto-mario promo-verano-2026
+        cm campaign-create mi-marca promo-verano-2026
     """
     from datetime import date, timedelta
 
@@ -473,7 +473,7 @@ def campaign_list(
     Lista las campañas de una marca.
 
     Ejemplo:
-        cm campaign-list resto-mario
+        cm campaign-list mi-marca
     """
     from .models.campaign import Campaign
 
@@ -524,7 +524,7 @@ def campaign_show(
     Muestra detalles de una campaña.
 
     Ejemplo:
-        cm campaign-show resto-mario promo-verano-2026
+        cm campaign-show mi-marca promo-verano-2026
     """
     from rich.panel import Panel
 
@@ -595,9 +595,15 @@ def campaign_show(
 @app.command()
 def product_list(brand: str = typer.Argument(..., help="Nombre de la marca")):
     """Lista todos los productos de una marca."""
-    product_dir = Path("products") / brand
+    product_dir = Path("brands") / brand / "products"
+    legacy_product_dir = Path("products") / brand
+    if not product_dir.exists() and legacy_product_dir.exists():
+        product_dir = legacy_product_dir
+
     if not product_dir.exists():
-        console.print(f"[red][X] Marca '{brand}' no encontrada en products/.[/red]")
+        console.print(
+            f"[red][X] Marca '{brand}' no encontrada en brands/{brand}/products (ni en products/{brand}).[/red]"
+        )
         raise typer.Exit(1)
 
     products = [d.name for d in product_dir.iterdir() if d.is_dir()]
@@ -647,16 +653,25 @@ def status():
     else:
         console.print("[yellow][!] brands/ no existe[/yellow]")
 
-    # Verificar products
-    products_dir = Path("products")
+    # Verificar products (nueva estructura + legacy)
+    products_dir = Path("brands")
+    product_count = 0
     if products_dir.exists():
-        product_count = sum(
+        for brand in (d for d in products_dir.iterdir() if d.is_dir()):
+            brand_products = brand / "products"
+            if brand_products.exists():
+                product_count += len([d for d in brand_products.iterdir() if d.is_dir()])
+    legacy_products_dir = Path("products")
+    if legacy_products_dir.exists():
+        product_count += sum(
             len([d for d in brand.iterdir() if d.is_dir()])
-            for brand in (products_dir.iterdir() if products_dir.is_dir() else [])
+            for brand in (legacy_products_dir.iterdir() if legacy_products_dir.is_dir() else [])
         )
+
+    if product_count > 0:
         console.print(f"[green][OK][/green] {product_count} producto(s) configurado(s)")
     else:
-        console.print("[yellow][!] products/ no existe[/yellow]")
+        console.print("[yellow][!] No hay productos configurados[/yellow]")
 
     # Verificar references
     refs_dir = Path("references")
@@ -886,7 +901,7 @@ def plan_create(
     Crea un plan de contenido desde lenguaje natural.
 
     Ejemplos:
-        cm plan-create "posts para el día del padre" --brand resto-mario
+        cm plan-create "posts para el día del padre" --brand mi-marca
         cm plan-create "promoción de verano" -b farmacia-central -c verano-2026
     """
     from pathlib import Path
@@ -930,6 +945,240 @@ def plan_create(
     console.print(f"\n[yellow]Próximo paso: cm plan-approve {plan.id}[/yellow]")
 
 
+@app.command("agent-chat")
+def agent_chat(
+    brand: str | None = typer.Option(None, "--brand", "-b", help="Marca (slug) opcional"),
+):
+    """Chat interactivo con Strategist (ida y vuelta) para reunir contexto y planificar."""
+    from .agents.strategist import StrategistAgent
+    from .models.brand import Brand
+
+    strategist = StrategistAgent()
+    context: list[dict] = []
+    brand_obj: Brand | None = None
+
+    if brand:
+        brand_dir = Path("brands") / brand
+        if brand_dir.exists():
+            try:
+                brand_obj = Brand.load(brand_dir)
+            except Exception as e:
+                console.print(f"[yellow][!] No se pudo cargar la marca '{brand}': {e}[/yellow]")
+        else:
+            console.print(
+                f"[yellow][!] Marca '{brand}' no encontrada. Continuo sin contexto de marca.[/yellow]"
+            )
+
+    console.print("\n[bold]Agent Chat (Strategist Orchestrator)[/bold]")
+    console.print("Escribí tu pedido. El Strategist te va a preguntar lo que falte.")
+    console.print(
+        "Comandos: [dim]'exit'[/dim] para salir, [dim]'/build'[/dim] para ejecutar agent-campaign con el último pedido."
+    )
+    console.print(
+        "[dim]Nota: solo hay generación real cuando se ejecuta /build (o cuando confirmás aprobación).[/dim]\n"
+    )
+
+    last_user_request: str | None = None
+    pending_build_request: str | None = None
+
+    def _execute_real_build(request_text: str) -> None:
+        if not brand:
+            console.print("[red][X] Para ejecutar build necesitás --brand.[/red]")
+            return
+
+        from .services.agent_campaign import OrchestratorCampaignService
+
+        console.print("[cyan]Ejecutando Orchestrator REAL con el pedido confirmado...[/cyan]")
+        try:
+            result = OrchestratorCampaignService().run_from_user_input(
+                brand_slug=brand,
+                user_request=request_text,
+                require_llm_orchestrator=True,
+            )
+            artifacts = result["artifacts"]
+            wp = artifacts.get("worker_plan", {})
+            generated = len([g for g in artifacts.get("generation", []) if "image_path" in g])
+            errors = len([g for g in artifacts.get("generation", []) if "error" in g])
+
+            console.print("[green][OK] Build REAL completado[/green]")
+            console.print(f"  Run ID: {result['run_id']}")
+            console.print(f"  Orchestrator mode: {wp.get('mode', '-')}")
+            console.print(f"  Worker sequence: {', '.join(wp.get('sequence', []))}")
+            console.print(f"  Imágenes generadas: {generated}")
+            console.print(f"  Errores: {errors}")
+            console.print(f"  Artefactos: {result['run_dir'] / 'artifacts.json'}")
+        except Exception as e:
+            console.print(f"[red][X] Error en build REAL:[/red] {e}")
+
+    while True:
+        user_msg = typer.prompt("Tu mensaje").strip()
+        if user_msg.lower() in {"exit", "quit", "salir"}:
+            console.print("[green][OK] Cerrando chat.[/green]")
+            break
+
+        approval_words = {
+            "ok",
+            "dale",
+            "aprobado",
+            "apruebo",
+            "si",
+            "sí",
+            "genera",
+            "ejecuta",
+            "adelante",
+        }
+        if user_msg.lower() in approval_words and pending_build_request:
+            _execute_real_build(pending_build_request)
+            pending_build_request = None
+            continue
+
+        if user_msg == "/build":
+            target_request = pending_build_request or last_user_request
+            if not target_request:
+                console.print("[yellow][!] Primero enviá un pedido en lenguaje natural.[/yellow]")
+                continue
+            _execute_real_build(target_request)
+            pending_build_request = None
+            continue
+
+        last_user_request = user_msg
+        reply, plan = strategist.chat(
+            message=user_msg,
+            brand=brand_obj,
+            context=context,
+            workflow_mode="plan",
+            brand_slug=brand,
+        )
+
+        console.print(f"\n[bold cyan]Strategist:[/bold cyan] {reply}\n")
+        context.append({"role": "user", "content": user_msg})
+        context.append({"role": "assistant", "content": reply})
+
+        if plan:
+            console.print("[green][OK] Plan detectado en la conversación[/green]")
+            console.print(plan.to_summary())
+            pending_build_request = last_user_request
+            console.print("[dim]Tip: escribí /build para ejecutar con el orquestador LLM.[/dim]\n")
+
+
+@app.command("agent-campaign")
+def agent_campaign(
+    brand: str = typer.Option(..., "--brand", "-b", help="Marca (slug)"),
+    message: str | None = typer.Option(
+        None,
+        "--message",
+        "-m",
+        help="Pedido libre del usuario; el Strategist lo traduce y dispara workers",
+    ),
+    products: str | None = typer.Option(
+        None,
+        "--products",
+        "-p",
+        help="Productos separados por coma (opcional: autodetecta en brands/<marca>/products)",
+    ),
+    objective: str = typer.Option(
+        "promocionar campaña visual con consistencia de marca",
+        "--objective",
+        "-o",
+        help="Objetivo de la campaña",
+    ),
+    days: int = typer.Option(3, "--days", "-d", help="Cantidad de días/items por producto"),
+    build: bool = typer.Option(True, "--build/--no-build", help="Ejecutar generación de imágenes"),
+    max_retries: int = typer.Option(
+        1,
+        "--max-retries",
+        help="Reintentos máximos por item cuando falla generación/QA",
+    ),
+    style_ref: Path | None = typer.Option(
+        None,
+        "--style-ref",
+        "-s",
+        help="Referencia de estilo (requerida si --build y no hay refs en marca)",
+    ),
+    require_llm_orchestrator: bool = typer.Option(
+        False,
+        "--require-llm-orchestrator",
+        help="Falla si no hay ANTHROPIC_API_KEY (evita fallback determinístico)",
+    ),
+):
+    """Ejecuta un flujo Orchestrator->Workers para campaña (MVP)."""
+    from .services.agent_campaign import OrchestratorCampaignService
+
+    product_slugs = [p.strip() for p in products.split(",") if p.strip()] if products else None
+
+    if days < 1 or days > 14:
+        console.print("[red][X] --days debe estar entre 1 y 14[/red]")
+        raise typer.Exit(1)
+
+    console.print("\n[bold]Agent Campaign (MVP)[/bold]")
+    console.print(f"  Marca: {brand}")
+    if message:
+        console.print(f"  Input dinámico: {message}")
+        console.print("  Modo: Strategist traduce input y orquesta workers")
+    else:
+        console.print(f"  Productos: {', '.join(product_slugs) if product_slugs else 'auto'}")
+        console.print(f"  Objetivo: {objective}")
+        console.print(f"  Días: {days}")
+        console.print(f"  Build: {'Sí' if build else 'No (solo plan)'}")
+        if build:
+            console.print(f"  Max retries por item: {max_retries}")
+
+    service = OrchestratorCampaignService()
+    llm_required = require_llm_orchestrator or bool(message)
+    try:
+        if message:
+            result = service.run_from_user_input(
+                brand_slug=brand,
+                user_request=message,
+                style_ref=style_ref,
+                max_retries=max_retries,
+                require_llm_orchestrator=llm_required,
+            )
+        else:
+            result = service.run(
+                brand_slug=brand,
+                product_slugs=product_slugs,
+                objective=objective,
+                days=days,
+                build=build,
+                style_ref=style_ref,
+                max_retries=max_retries,
+                require_llm_orchestrator=llm_required,
+            )
+    except Exception as e:
+        console.print(f"[red][X] Error ejecutando agent-campaign:[/red] {e}")
+        raise typer.Exit(1)
+
+    run_dir = result["run_dir"]
+    artifacts = result["artifacts"]
+    generated = len([g for g in artifacts.get("generation", []) if "image_path" in g])
+    errors = len([g for g in artifacts.get("generation", []) if "error" in g])
+
+    console.print("\n[green][OK] Agent run completado[/green]")
+    console.print(f"  Run ID: {result['run_id']}")
+    console.print(f"  Directorio: {run_dir}")
+    translation = artifacts.get("input_translation")
+    if translation:
+        console.print(f"  Input translation mode: {translation.get('mode', '-')}")
+        console.print(f"  Input translation reason: {translation.get('reason', '-')}")
+        console.print(
+            f"  Input translation params: days={translation.get('days')} build={translation.get('build')} products={translation.get('products') or 'auto'}"
+        )
+    worker_plan = artifacts.get("worker_plan", {})
+    if worker_plan:
+        seq = worker_plan.get("sequence", [])
+        console.print(f"  Orchestrator mode: {worker_plan.get('mode', '-')}")
+        console.print(f"  Worker sequence: {', '.join(seq)}")
+        console.print(f"  Worker plan reason: {worker_plan.get('reason', '-')}")
+    console.print(f"  Estilo seleccionado: {artifacts.get('selected_style')}")
+    console.print(f"  Items de campaña: {len(artifacts.get('campaign_items', []))}")
+    if build:
+        console.print(f"  Imágenes generadas: {generated}")
+        console.print(f"  Errores de generación: {errors}")
+    console.print(f"  Artefactos: {run_dir / 'artifacts.json'}")
+    console.print(f"  Reporte: {run_dir / 'report.md'}")
+
+
 @app.command("plan-list")
 def plan_list(
     brand: str | None = typer.Option(None, "--brand", "-b", help="Filtrar por marca"),
@@ -939,7 +1188,7 @@ def plan_list(
 
     Ejemplo:
         cm plan-list
-        cm plan-list --brand resto-mario
+        cm plan-list --brand mi-marca
     """
     from pathlib import Path
 
@@ -1248,8 +1497,8 @@ def campaign_inpaint(
     - Coherencia visual entre las imágenes de la campaña (cascada)
 
     Ejemplo:
-        cm campaign-inpaint resto-mario promo-verano
-        cm campaign-inpaint resto-mario promo-verano --scale 0.35 --position bottom-center
+        cm campaign-inpaint mi-marca promo-verano
+        cm campaign-inpaint mi-marca promo-verano --scale 0.35 --position bottom-center
     """
     from pathlib import Path
 
@@ -1352,8 +1601,8 @@ def campaign_refs(
     Por defecto 3 días (teaser, main_offer, last_chance).
 
     Ejemplo:
-        cm campaign-refs resto-mario --product foto.jpg --scene escena.png --font fuente.png
-        cm campaign-refs resto-mario -p producto.png -s fondo.png -f tipografia.png --days 3
+        cm campaign-refs mi-marca --product foto.jpg --scene escena.png --font fuente.png
+        cm campaign-refs mi-marca -p producto.png -s fondo.png -f tipografia.png --days 3
     """
     from pathlib import Path
 

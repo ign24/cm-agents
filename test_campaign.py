@@ -11,7 +11,7 @@ from cm_agents.agents.strategist import StrategistAgent
 from cm_agents.models.brand import Brand
 
 # Setup
-brand_dir = Path("brands/resto-mario")
+    brand_dir = Path("brands/mi-marca")
 brand = Brand.load(brand_dir)
 
 # Create strategist

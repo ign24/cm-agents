@@ -11,7 +11,7 @@ import httpx
 
 # Configuration
 BASE_URL = "http://localhost:8000/api/v1"
-BRAND_SLUG = "resto-mario"
+BRAND_SLUG = "mi-marca"
 TIMEOUT = 30.0
 
 

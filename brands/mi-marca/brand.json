@@ -1,12 +1,12 @@
 {
-  "name": "Restaurante Mario",
-  "handle": "@restomario",
-  "industry": "food_restaurant",
+  "name": "Mi Marca",
+  "handle": "@mi_marca",
+  "industry": "retail",
   
   "identity": {
-    "tagline": "Sabor de casa",
-    "voice": ["familiar", "cálido", "cercano"],
-    "values": ["calidad", "tradición", "frescura", "sabor casero"]
+    "tagline": "Diseno visual con identidad clara",
+    "voice": ["profesional", "claro", "confiable"],
+    "values": ["calidad", "consistencia", "claridad de marca"]
   },
   
   "assets": {
@@ -18,12 +18,12 @@
   "logo": "assets/logo.png",
   
   "palette": {
-    "primary": "#D32F2F",
-    "secondary": "#FFC107",
+    "primary": "#1E3A8A",
+    "secondary": "#0EA5E9",
     "background": "#FFFFFF",
     "text": "#212121",
-    "accent": "#4CAF50",
-    "gradient": ["#D32F2F", "#FF5252"]
+    "accent": "#10B981",
+    "gradient": ["#1E3A8A", "#0EA5E9"]
   },
   
   "fonts": {
@@ -35,7 +35,7 @@
   "typography": {
     "heading": {
       "font": "fonts/Montserrat-Bold.ttf",
-      "style": "bold, impactful, appetizing"
+      "style": "bold, clean, high-contrast"
     },
     "body": {
       "font": "fonts/OpenSans-Regular.ttf",
@@ -43,25 +43,25 @@
     },
     "price": {
       "font": "fonts/Montserrat-ExtraBold.ttf",
-      "style": "bold, attention-grabbing, promotional"
+      "style": "bold, promotional, readable"
     }
   },
   
   "style": {
-    "mood": ["cálido", "familiar", "apetitoso"],
-    "photography_style": "close-up, warm lighting, steam visible, rustic props",
+    "mood": ["moderno", "profesional", "dinamico"],
+    "photography_style": "clean product focus, controlled lighting, clear visual hierarchy",
     "preferred_backgrounds": [
-      "rustic wooden table",
-      "warm restaurant ambiance",
-      "cozy kitchen setting"
+      "clean gradient background",
+      "studio-inspired composition",
+      "minimal contextual props"
     ],
-    "preferred_design_styles": ["lifestyle_warm", "authentic_imperfect"],
-    "avoid": ["cold colors", "clinical look", "minimalist stark", "blue tones"]
+    "preferred_design_styles": ["minimal_clean", "editorial_magazine"],
+    "avoid": ["visual clutter", "low contrast text", "overloaded composition"]
   },
   
   "text_overlay": {
     "price_badge": {
-      "bg_color": "#D32F2F",
+      "bg_color": "#1E3A8A",
       "text_color": "#FFFFFF",
       "position": "bottom-left",
       "padding": 20
@@ -79,17 +79,17 @@
   },
   
   "social_media": {
-    "instagram": "@restomario",
-    "facebook": "RestauranteMario",
+    "instagram": "@mi_marca",
+    "facebook": "MiMarca",
     "platforms": ["instagram", "facebook"]
   },
   
   "hashtags": {
-    "always": ["#RestoMario", "#ComidaCasera"],
+    "always": ["#MiMarca", "#BrandConsistency"],
     "categories": {
-      "hamburguesas": ["#Hamburguesa", "#BurgerLovers", "#FoodPorn"],
-      "pizzas": ["#Pizza", "#PizzaTime", "#PizzaLovers"],
-      "bebidas": ["#Refrescante", "#BebidaFria"]
+      "product": ["#Producto", "#Campaign", "#SocialCreative"],
+      "promo": ["#Oferta", "#Conversion", "#PerformanceCreative"],
+      "seasonal": ["#Temporada", "#Awareness", "#BrandRecall"]
     }
   }
 }
