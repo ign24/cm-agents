@@ -1,6 +1,6 @@
 # CM Agents
 
-Sistema de orquestación de agentes AI para automatizar la creación de contenido visual para redes sociales. Genera imágenes profesionales de productos con calidad de diseño de agencia, tomando inspiración de Pinterest y aplicando best practices de diseño 2026.
+Plataforma end-to-end de agentes AI para planificar, orquestar y producir contenido para redes sociales (posts y campañas) con consistencia de marca. Combina chat y estrategia, búsqueda de referencias (Pinterest vía MCP), generación de prompts con guidelines/tendencias 2026 y generación/composición de imágenes (producto réplica exacta, texto integrado y logo) mediante múltiples pipelines.
 
 **Versión:** 0.1.0 | **Tests:** 93 pasando | **Seguridad:** Validación + Rate limiting
 
@@ -95,7 +95,7 @@ flowchart TD
 
 ## Instalación
 
-### Backend
+### Backend (API FastAPI)
 
 ```bash
 # 1. Clonar e instalar
@@ -113,10 +113,23 @@ cp .env.example .env
 
 # 3. Verificar
 cm status
-
-# 4. Iniciar servidor API
-cm serve --port 8000 --reload
 ```
+
+### Levantar el backend (dev)
+
+```bash
+# Via CLI (recomendado)
+cm serve --port 8000 --reload
+
+# Alternativa directa (sin CLI)
+uv run uvicorn cm_agents.api.main:app --reload --port 8000
+```
+
+Endpoints utiles:
+
+- `http://localhost:8000/health`
+- `http://localhost:8000/docs`
+- `ws://localhost:8000/api/v1/ws/chat/<session_id>`
 
 ### Frontend
 
