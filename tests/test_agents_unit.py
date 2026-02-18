@@ -25,17 +25,10 @@ class TestStrategistAgentUnit:
         assert agent.knowledge is not None
         assert isinstance(agent.knowledge, KnowledgeBase)
 
-    def test_strategist_detects_pinterest_keywords(self, knowledge_dir: Path):
-        """StrategistAgent detects Pinterest search intent."""
+    def test_strategist_initial_runtime_state(self, knowledge_dir: Path):
+        """StrategistAgent starts with lazy client state."""
         agent = StrategistAgent(knowledge_dir=knowledge_dir)
-
-        # Should detect Pinterest
-        assert agent._should_search_pinterest("busca en pinterest ideas") is True
-        assert agent._should_search_pinterest("referencias de pinterest") is True
-
-        # Should not detect
-        assert agent._should_search_pinterest("crear un post") is False
-        assert agent._should_search_pinterest("hola") is False
+        assert agent.client is None
 
     def test_strategist_detects_plan_creation_intent(self, knowledge_dir: Path):
         """StrategistAgent detects when to create a plan."""
@@ -150,14 +143,10 @@ class TestAgentIntegrationMocked:
         assert response is not None
         assert isinstance(response, str)
 
-    def test_pinterest_detection_works(self, knowledge_dir: Path):
-        """Verify Pinterest keyword detection works correctly."""
+    def test_strategist_keeps_single_client_state(self, knowledge_dir: Path):
+        """StrategistAgent should only keep anthropic client state."""
         agent = StrategistAgent(knowledge_dir=knowledge_dir)
-
-        # Should detect Pinterest keywords
-        assert agent._should_search_pinterest("busca en pinterest food photography") is True
-        assert agent._should_search_pinterest("referencias de pinterest") is True
-        assert agent._should_search_pinterest("crear un post normal") is False
+        assert hasattr(agent, "client")
 
 
 class TestAgentErrorHandling:

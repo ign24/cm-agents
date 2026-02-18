@@ -8,7 +8,7 @@ Modos disponibles:
 
 DIRECT (nuevo, recomendado):
     - Usuario sube 1 imagen del producto
-    - Pinterest busca referencias de estilo
+    - Usa referencias visuales de estilo (si existen en references/)
     - Responses API genera imagen base (producto + escena, sin texto)
     - Responses API agrega texto profesional (headline, precio)
     - CascadeStyleManager mantiene coherencia entre días
@@ -34,8 +34,8 @@ from rich.prompt import Prompt
 console = Console(force_terminal=True, legacy_windows=False)
 
 
-def get_pinterest_refs(brand_dir: Path) -> list[Path]:
-    """Busca referencias de Pinterest descargadas."""
+def get_style_refs(brand_dir: Path) -> list[Path]:
+    """Busca referencias visuales de estilo disponibles."""
     refs_dir = brand_dir / "references"
     if not refs_dir.exists():
         # Buscar en directorio global de referencias
@@ -91,13 +91,13 @@ def run_direct_mode(
         return
     console.print(f"   [green][OK][/green] {product_image}")
 
-    # 3. Buscar referencias de Pinterest
-    console.print("\n[bold]3. Referencias de Pinterest...[/bold]")
-    pinterest_refs = get_pinterest_refs(brand_dir)
-    if pinterest_refs:
-        for ref in pinterest_refs[:3]:
+    # 3. Buscar referencias de estilo
+    console.print("\n[bold]3. Referencias de estilo...[/bold]")
+    style_refs = get_style_refs(brand_dir)
+    if style_refs:
+        for ref in style_refs[:3]:
             console.print(f"   [green][OK][/green] {ref.name}")
-        console.print(f"   Total: {len(pinterest_refs)} referencias")
+        console.print(f"   Total: {len(style_refs)} referencias")
     else:
         console.print(
             "   [yellow][!][/yellow] Sin referencias - se usará solo el estilo del StyleGuide"
@@ -147,7 +147,7 @@ def run_direct_mode(
             campaign_plan=campaign_plan,
             brand_dir=brand_dir,
             product_image=product_image,
-            pinterest_refs=pinterest_refs,
+            style_refs=style_refs,
             use_cascade=True,
         )
 

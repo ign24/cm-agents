@@ -1,15 +1,15 @@
 # CM Agents
 
-Plataforma end-to-end de agentes AI para planificar, orquestar y producir contenido para redes sociales (posts y campañas) con consistencia de marca. Combina chat y estrategia, búsqueda de referencias (Pinterest vía MCP), generación de prompts con guidelines/tendencias 2026 y generación/composición de imágenes (producto réplica exacta, texto integrado y logo) mediante múltiples pipelines.
+Plataforma end-to-end de agentes AI para planificar, orquestar y producir contenido para redes sociales (posts y campañas) con consistencia de marca. Combina chat y estrategia, análisis de referencias visuales, generación de prompts con guidelines/tendencias 2026 y generación/composición de imágenes (producto réplica exacta, texto integrado y logo) mediante múltiples pipelines.
 
-**Versión:** 0.1.0 | **Tests:** 93 pasando | **Seguridad:** Validación + Rate limiting
+**Versión:** 0.1.0 | **Tests:** 92 pasando | **Seguridad:** Validación + Rate limiting
 
 > **Estado:** MVP en desarrollo activo. No recomendado para producción sin hardening adicional.
 
 ## Qué hace
 
 1. **Chat Inteligente**: Habla en lenguaje natural para crear planes de contenido
-2. **Analiza** imágenes de referencia de Pinterest (estilo + producto) en una sola llamada
+2. **Analiza** imágenes de referencia visual (estilo + producto) en una sola llamada
 3. **Genera prompts** profesionales aplicando tendencias 2026 y tu identidad de marca
 4. **Genera imágenes** con producto (réplica exacta), texto integrado, logo y estilo de la referencia
 
@@ -20,7 +20,7 @@ Plataforma end-to-end de agentes AI para planificar, orquestar y producir conten
 - **API REST + WebSocket** funcional con chat en tiempo real
 - **Frontend Next.js 16** con UI moderna y responsive
 - **StrategistAgent** - Crea planes de contenido desde lenguaje natural
-- **93 tests automatizados** - API, seguridad, orchestrator e2e, y lógica de negocio
+- **92 tests automatizados** - API, seguridad, orchestrator e2e, y lógica de negocio
 - **Seguridad básica** - Validación de inputs, rate limiting, CORS
 - **Type-safe** - TypeScript + Pydantic con validaciones
 
@@ -109,7 +109,8 @@ cp .env.example .env
 # ANTHROPIC_API_KEY=sk-ant-...
 # OPENAI_API_KEY=sk-...
 # LANGSEARCH_API_KEY=ls-...  # Opcional: activa web search de tendencias en ResearchWorker
-# API_KEY=your-secret-key  # Opcional: Requiere X-API-Key header
+# API_KEY=your-secret-key    # Opcional: Requiere X-API-Key header
+# TRUST_PROXY=true           # Opcional: confiar en X-Forwarded-For (solo si hay reverse-proxy)
 
 # 3. Verificar
 cm status
@@ -309,10 +310,9 @@ cm styles food
 cm product-list mi-marca        # Listar productos
 cm status                       # Estado del sistema
 cm estimate                     # Estimar costos
-cm pinterest-search <query>     # Buscar imágenes en Pinterest (MCP)
-cm mcp-tools <server>           # Listar tools de un servidor MCP
 cm agent-chat --brand mi-marca  # Chat interactivo con Strategist
 cm agent-campaign ...           # Orchestrator->Workers (MVP)
+cm styles [categoria]           # Ver estilos disponibles
 cm serve [--reload]             # Iniciar API server
 ```
 
@@ -350,7 +350,7 @@ cm-agents/
 └── src/cm_agents/
     ├── agents/                  # CreativeEngine, Generator, Strategist
     ├── models/                  # Modelos (Brand, Product, Campaign)
-    ├── services/                # DirectGenerator, Inpainting, MCP
+    ├── services/                # DirectGenerator, Inpainting
     ├── api/                     # REST + WebSocket server
     ├── pipeline.py              # Orquestación
     ├── styles.py                # Registro de estilos (knowledge base)
@@ -481,10 +481,10 @@ Para campañas, multiplicar por número de imágenes. `campaign-refs` genera 2 l
 
 ### Seguridad
 - **Validación de inputs**: Anti path-traversal y XSS
-- **Rate limiting**: 120 requests/minuto
+- **Rate limiting**: 120 requests/minuto por IP; 30 mensajes/minuto por conexión WebSocket
 - **API Key opcional**: Protección con header X-API-Key
 - **CORS configurable**: Estricto en producción
-- **93 tests**: Cobertura de API, seguridad, orchestrator e2e y lógica
+- **92 tests**: Cobertura de API, seguridad, orchestrator e2e y lógica
 
 ## Licencia
 

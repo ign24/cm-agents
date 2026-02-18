@@ -68,11 +68,17 @@ class RateLimiter:
         self._requests: dict[str, list[float]] = {}
 
     def _get_client_id(self, request: Request) -> str:
-        """Get client identifier from request."""
-        # Use X-Forwarded-For if behind proxy, otherwise use client host
-        forwarded = request.headers.get("x-forwarded-for")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+        """Get client identifier from request.
+
+        X-Forwarded-For is NOT trusted by default: a client can spoof it and
+        bypass rate limiting.  Set TRUST_PROXY=true via env + a reverse-proxy
+        that strips the header from external traffic before enabling it.
+        """
+        import os
+        if os.getenv("TRUST_PROXY", "").lower() == "true":
+            forwarded = request.headers.get("x-forwarded-for")
+            if forwarded:
+                return forwarded.split(",")[0].strip()
         return request.client.host if request.client else "unknown"
 
     def _cleanup_old_requests(self, client_id: str, now: float) -> None:

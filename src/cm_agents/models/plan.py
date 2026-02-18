@@ -50,7 +50,7 @@ class ContentPlanItem(BaseModel):
     size: Literal["feed", "story"] = "feed"
     style: str = "minimal_clean"
     copy_suggestion: str = ""
-    reference_query: str = ""  # Query for Pinterest search
+    reference_query: str = ""  # Query for visual reference search
     reference_urls: list[str] = Field(default_factory=list)  # Found references
     reference_local_paths: list[str] = Field(
         default_factory=list, description="Local paths to downloaded reference images"

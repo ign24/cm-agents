@@ -49,7 +49,7 @@ class GenerationPipeline:
         reference_path: Path,
         brand_dir: Path,
         product_dir: Path,
-        target_sizes: list[str] = ["feed"],
+        target_sizes: list[str] | None = None,
         include_text: bool = True,
         product_ref_path: Path | None = None,
         campaign_dir: Path | None = None,
@@ -63,7 +63,7 @@ class GenerationPipeline:
         Ejecuta el pipeline completo para generar imágenes.
 
         Args:
-            reference_path: Path a la imagen de ESTILO (Pinterest)
+            reference_path: Path a la imagen de ESTILO (referencia visual)
             brand_dir: Path al directorio de la marca
             product_dir: Path al directorio del producto
             target_sizes: Lista de tamaños ["feed", "story"]
@@ -77,6 +77,9 @@ class GenerationPipeline:
         Returns:
             Lista de GenerationResult con las imágenes generadas
         """
+        if target_sizes is None:
+            target_sizes = ["feed"]
+
         # Determinar modo
         dual_mode = product_ref_path is not None
         mode_str = "Dual (estilo + producto)" if dual_mode else "Simple"
@@ -399,68 +402,6 @@ class CampaignPipeline:
 
         return results
 
-    def run_with_pinterest_search_sync(
-        self,
-        campaign_plan: "CampaignPlan",
-        brand_dir: Path,
-        pinterest_query: str,
-        output_dir: Path | None = None,
-        num_references: int = 3,
-    ) -> list[GenerationResult]:
-        """
-        Ejecuta campaña buscando referencias en Pinterest (versión síncrona).
-
-        Args:
-            campaign_plan: Plan de campaña
-            brand_dir: Path a la marca
-            pinterest_query: Query para buscar en Pinterest
-            output_dir: Directorio de salida
-            num_references: Cuántas referencias descargar
-        """
-        from .services.mcp_client import search_pinterest_sync
-
-        console.print("\n[bold blue]Buscando referencias en Pinterest...[/bold blue]")
-        console.print(f"[dim]   Query: {pinterest_query}[/dim]")
-
-        # Buscar y descargar referencias (síncrono)
-        try:
-            results = search_pinterest_sync(
-                query=pinterest_query,
-                limit=num_references,
-                download=True,
-            )
-            console.print(f"[green][OK][/green] {len(results)} referencias encontradas")
-        except Exception as e:
-            console.print(f"[yellow][!] Pinterest search failed: {e}[/yellow]")
-            console.print("[yellow]   Usando referencias existentes...[/yellow]")
-            results = []
-
-        # Obtener paths de las imágenes descargadas
-        style_references = []
-        refs_dir = Path("references")
-        if refs_dir.exists():
-            downloaded = sorted(
-                list(refs_dir.glob("*.jpg"))
-                + list(refs_dir.glob("*.png"))
-                + list(refs_dir.glob("*.webp")),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            style_references = downloaded[:num_references]
-            console.print(f"[dim]   Referencias: {[p.name for p in style_references]}[/dim]")
-
-        if not style_references:
-            console.print("[red][X] No hay referencias de estilo disponibles[/red]")
-            return []
-
-        # Ejecutar pipeline normal
-        return self.run(
-            campaign_plan=campaign_plan,
-            brand_dir=brand_dir,
-            style_references=style_references,
-            output_dir=output_dir,
-        )
-
     def run_with_inpainting(
         self,
         campaign_plan: "CampaignPlan",
@@ -682,7 +623,7 @@ class CampaignPipeline:
         campaign_plan: "CampaignPlan",
         brand_dir: Path,
         product_image: Path,
-        pinterest_refs: list[Path],
+        style_refs: list[Path],
         output_dir: Path | None = None,
         use_cascade: bool = True,
     ) -> list[GenerationResult]:
@@ -699,7 +640,7 @@ class CampaignPipeline:
             campaign_plan: Plan de campaña con días y StyleGuide
             brand_dir: Directorio de la marca
             product_image: Imagen del producto (subida por usuario)
-            pinterest_refs: Referencias de Pinterest para estilo
+            style_refs: Referencias visuales de estilo
             output_dir: Directorio de salida
             use_cascade: Si usar coherencia visual entre días
 
@@ -734,7 +675,7 @@ class CampaignPipeline:
             price=brand.text_overlay.price_badge.text_color if brand.text_overlay else "",
         )
         console.print(f"   [green][OK][/green] Producto: {product.name}")
-        console.print(f"   [green][OK][/green] Pinterest refs: {len(pinterest_refs)}")
+        console.print(f"   [green][OK][/green] Style refs: {len(style_refs)}")
 
         # 2. Obtener StyleGuide
         style_guide = campaign_plan.style_guide
@@ -784,7 +725,7 @@ class CampaignPipeline:
             )
 
             # Si es el primer día y usamos cascada, preparar para coherencia
-            effective_refs = pinterest_refs
+            effective_refs = style_refs
             if cascade_manager and i > 0:
                 # Obtener referencia de estilo del anchor
                 style_ref_prompt = cascade_manager.get_style_reference_prompt()
@@ -794,7 +735,7 @@ class CampaignPipeline:
                 # Generar imagen completa (base + texto)
                 final_path, cost = generator.generate_complete(
                     product_image=product_image,
-                    pinterest_refs=effective_refs,
+                    style_refs=effective_refs,
                     scene_prompt=scene_prompt,
                     style_guide=style_guide,
                     product=product,

@@ -101,7 +101,7 @@ class ProductVisualAnalysis(BaseModel):
 
 
 class ReferenceAnalysis(BaseModel):
-    """Análisis completo de una imagen de referencia (Pinterest)."""
+    """Análisis completo de una imagen de referencia visual."""
 
     layout: LayoutAnalysis = Field(..., description="Análisis del layout")
     style: StyleAnalysis = Field(..., description="Análisis del estilo")

@@ -198,29 +198,3 @@ def mock_openai(monkeypatch):
 
     monkeypatch.setattr("openai.OpenAI", MockClient)
     return call_log
-
-
-@pytest.fixture
-def mock_mcp_service(monkeypatch):
-    """Mock MCP service for testing Pinterest search without real MCP calls."""
-    call_log = []
-
-    class MockMCPService:
-        async def search_pinterest(self, query: str, limit: int = 10, download: bool = True):
-            call_log.append(
-                {
-                    "method": "search_pinterest",
-                    "query": query,
-                    "limit": limit,
-                }
-            )
-            return [
-                {"url": "https://pinterest.com/pin/123", "local_path": "/tmp/ref1.jpg"},
-                {"url": "https://pinterest.com/pin/456", "local_path": "/tmp/ref2.jpg"},
-            ]
-
-        async def list_tools(self, server_name: str):
-            return [{"name": "search", "description": "Search images"}]
-
-    monkeypatch.setattr("cm_agents.services.mcp_client.MCPClientService", MockMCPService)
-    return call_log

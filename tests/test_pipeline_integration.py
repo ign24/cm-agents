@@ -187,36 +187,16 @@ class TestWebSocketChatFlow:
             assert response["type"] in ["chat", "assistant", "error"]
 
 
-class TestPinterestMCPIntegration:
-    """Test Pinterest MCP keyword detection."""
+class TestReferenceFlow:
+    """Ensure strategist reference flow remains stable."""
 
-    def test_pinterest_keyword_detection(self, knowledge_dir: Path):
-        """Verify Pinterest keyword detection works."""
+    def test_strategist_runtime_state(self, knowledge_dir: Path):
+        """Strategist runtime state should be minimal at startup."""
         from cm_agents.agents.strategist import StrategistAgent
 
         agent = StrategistAgent(knowledge_dir=knowledge_dir)
 
-        # Verify detection works for various keywords
-        assert agent._should_search_pinterest("busca en pinterest food photography") is True
-        assert agent._should_search_pinterest("referencias de pinterest") is True
-        assert agent._should_search_pinterest("ideas de pinterest") is True
-        assert agent._should_search_pinterest("crear un post normal") is False
-        assert agent._should_search_pinterest("hola") is False
-
-    def test_mcp_service_can_be_initialized(self, knowledge_dir: Path):
-        """Verify MCP service can be lazily initialized."""
-        from cm_agents.agents.strategist import StrategistAgent
-
-        agent = StrategistAgent(knowledge_dir=knowledge_dir)
-
-        # MCP service is lazily initialized
-        assert agent.mcp_service is None  # Not initialized yet
-
-        # _get_mcp_service should return service or None
-        # (depends on MCP availability in test environment)
-        service = agent._get_mcp_service()
-        # Either returns a service or None (if MCP not available)
-        assert service is None or service is not None
+        assert agent.client is None
 
 
 class TestAgentObservability:

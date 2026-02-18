@@ -464,6 +464,7 @@ class OrchestratorCampaignService:
                 temperature=0,
                 system="You are a strict JSON planner for agent orchestration. No markdown.",
                 messages=[{"role": "user", "content": user_prompt}],
+                timeout=30.0,
             )
             text = self._extract_response_text(response)
             if not text:
@@ -639,6 +640,7 @@ class OrchestratorCampaignService:
                 temperature=0,
                 system="You are a strict JSON translator for agent orchestration parameters.",
                 messages=[{"role": "user", "content": prompt}],
+                timeout=30.0,
             )
             text = self._extract_response_text(response)
             if not text:

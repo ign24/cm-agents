@@ -1,5 +1,6 @@
 """Image generation routes."""
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -158,23 +159,22 @@ async def execute_generation(
                 reference_path = None
                 product_ref_path = None
 
-                # Try to use local paths from Pinterest MCP (NEW - most reliable)
+                # Try to use local reference paths from plan items
                 if item.reference_local_paths:
-                    # Use first local path from Pinterest download
+                    # Use first local reference path
                     local_path = Path(item.reference_local_paths[0])
                     if local_path.exists():
                         reference_path = local_path
-                        logger.info(f"Using Pinterest reference (local_path): {reference_path}")
+                        logger.info(f"Using reference image (local_path): {reference_path}")
                     else:
                         logger.warning(f"Local path not found: {local_path}")
 
-                # Fallback: Try to find by URLs (old behavior)
+                # Fallback: Try to find by URLs in local references directory
                 if not reference_path and item.reference_urls:
-                    # Pinterest MCP downloads images to references/ directory
-                    # Try to find downloaded files by checking recent files
+                    # Try to find matching downloaded files by checking recent files
                     refs_dir = Path("references")
                     if refs_dir.exists():
-                        # Get most recent image files (Pinterest MCP downloads them)
+                        # Get most recent image files
                         ref_files = sorted(
                             list(refs_dir.glob("*.jpg"))
                             + list(refs_dir.glob("*.png"))
@@ -182,15 +182,13 @@ async def execute_generation(
                             key=lambda p: p.stat().st_mtime,
                             reverse=True,
                         )
-                        # Use most recent file (likely from Pinterest search)
+                        # Use most recent file
                         if ref_files:
                             reference_path = ref_files[0]
-                            logger.info(
-                                f"Using Pinterest reference (most recent): {reference_path}"
-                            )
+                            logger.info(f"Using reference image (most recent): {reference_path}")
                         else:
                             logger.warning(
-                                "Pinterest URLs provided but no images found in references/"
+                                "Reference URLs provided but no images found in references/"
                             )
 
                 # Fallback: use default reference from brand references or product photos
@@ -247,7 +245,8 @@ async def execute_generation(
                         break
 
                 # Run pipeline with variants
-                results = pipeline.run(
+                results = await asyncio.to_thread(
+                    pipeline.run,
                     reference_path=reference_path,
                     brand_dir=brand_dir,
                     product_dir=product_dir,

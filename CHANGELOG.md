@@ -14,9 +14,28 @@ Todos los cambios notables al proyecto se documentan en este archivo.
 
 ### Changed
 
-- Documentación actualizada a **93 tests** (README y AGENTS).
+- Documentación actualizada a **92 tests** (README y AGENTS).
 - Se actualizó la sección de knowledge base en README para listar todos los JSON activos:
   `design_2026.json`, `copy_templates.json`, `industry_insights.json`, `marketing_calendar.json`.
+
+### Removed
+
+- Integración MCP/Pinterest eliminada:
+  - `src/cm_agents/services/mcp_client.py` eliminado.
+  - Dependencia `mcp>=1.7.0` eliminada de `pyproject.toml`.
+  - Comando `cm pinterest-search` eliminado del CLI.
+  - Comando `cm mcp-tools` eliminado del CLI.
+  - `StrategistAgent` ya no busca en Pinterest; solo maneja referencias adjuntas o locales.
+  - `CampaignPipeline.run_with_pinterest_search_sync()` eliminado.
+
+### Security
+
+- WebSocket hardening en `chat.py`:
+  - Límite de 500 sesiones simultáneas con eviction por LRU.
+  - Historial de conversación recortado a 80 mensajes por sesión.
+  - Rate limiting por conexión WebSocket: 30 mensajes/minuto.
+  - Validación de imágenes entrantes: máximo 5 por mensaje, 5 MB cada una.
+- `RateLimiter` (HTTP): `X-Forwarded-For` ya no se confía por defecto. Activar con `TRUST_PROXY=true` solo si hay un reverse-proxy que filtre el header de origen externo.
 
 ### Fixed
 
@@ -39,7 +58,7 @@ Todos los cambios notables al proyecto se documentan en este archivo.
   - `cm campaign-inpaint` (inpainting en pasos).
   - `cm campaign-refs` (producto+escena+fuente) con variaciones de ángulo por día.
 - Planes de contenido: `cm plan-create`, `plan-list`, `plan-show`, `plan-approve`, `plan-execute`.
-- Herramientas: `cm pinterest-search`, `cm mcp-tools`, `cm estimate`.
+- Herramientas: `cm estimate`.
 - Registro de estilos dinámico (`styles.py`) cargado desde knowledge base.
 
 ### Changed

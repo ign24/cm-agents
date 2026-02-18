@@ -104,7 +104,7 @@ class CreativeEngine(BaseAgent):
 
         Args:
             campaign_plan: Plan de campaña con días y temas
-            style_references: Imágenes de referencia de estilo (Pinterest, etc.)
+            style_references: Imágenes de referencia de estilo (inspiración visual)
             product_references: Dict de slug -> path a foto del producto
             brand: Configuración de la marca
             products: Dict de slug -> Product
@@ -213,6 +213,7 @@ NEGATIVE PROMPTS (avoid these):
             temperature=self.temperature,
             system=CREATIVE_ENGINE_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": content_parts}],
+            timeout=120.0,
         )
 
         # Parsear respuesta
@@ -350,6 +351,7 @@ Respondé en JSON con: {{"prompt": "...", "negative_prompt": "...", "visual_note
             temperature=self.temperature,
             system=CREATIVE_ENGINE_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": content_parts}],
+            timeout=60.0,
         )
 
         response_text = message.content[0].text

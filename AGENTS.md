@@ -48,7 +48,7 @@ flowchart TD
 
 ```
 Input:
-  - style_ref: Path (imagen Pinterest o referencia visual)
+  - style_ref: Path (imagen de referencia visual)
   - product_ref: Path (foto producto real)
   - brand: Brand (config marca)
   - product: Product (config producto)
@@ -85,7 +85,7 @@ Generator Output:
 | `direct_generator.py` | `DirectGenerator` | Generación escena+producto y text overlay (campaign-refs) |
 | `inpainting_compositor.py` | `InpaintingCompositor` | Composición por inpainting (campaign-inpaint) |
 | `variant_generator.py` | `VariantStrategy` | Genera variaciones de prompts |
-| `mcp_client.py` | `MCPClientService` | Búsqueda en Pinterest vía MCP |
+| `agent_campaign.py` | `OrchestratorCampaignService` | Orquestador Strategist + workers (agent-campaign) |
 
 ### Modelos (`src/cm_agents/models/`)
 
@@ -158,7 +158,7 @@ class StrategistAgent:
 - Detectar objetivo: promocionar, lanzamiento, engagement
 - Detectar ocasión: día del padre, navidad, black friday
 - Auto-seleccionar estilo de diseño según marca/industria
-- Crear queries para búsqueda de referencias en Pinterest (vía MCP)
+- Sugerir direcciones de referencia visual
 - Generar `ContentPlan` con items ejecutables
 
 ## Pipeline de Orquestación
@@ -272,10 +272,8 @@ cm styles [categoria]            # Listar estilos de diseño
 cm product-list <marca>          # Listar productos
 cm status                        # Estado del sistema
 cm estimate                      # Estimar costo de generación
-cm pinterest-search <query>      # Buscar imágenes en Pinterest (MCP)
-cm mcp-tools <server>            # Listar tools de un servidor MCP
 
-# Server
+# Servidor
 cm serve [--reload]              # Iniciar API server
 ```
 
@@ -487,12 +485,12 @@ El Strategist pregunta lo que el **GenerationPipeline** necesita para no fallar:
 - **Marca (slug)**: `brands/{slug}/` — se pasa `brand_slug` desde la API.
 - **Industria**: en `brand.json` (CreativeEngine y estilos).
 - **Productos con fotos**: `brands/{marca}/products/{producto}/photos/` (el Generador replica el producto desde la foto). `product.json` es opcional.
-- **Referencia de estilo**: Pinterest, imágenes adjuntas o `brands/{marca}/references/`.
+- **Referencia de estilo**: imágenes adjuntas o `brands/{marca}/references/`.
 
 **Imágenes de referencia**:
 - El frontend envía imágenes (data URLs base64) vía WebSocket `chat` o REST `POST /chat` con `images`.
 - El Strategist las recibe y las pasa a **Claude Vision** (Anthropic) como bloques multimodales.
-- Claude usa las imágenes como estilo Pinterest, producto o inspiración para el plan.
+- Claude usa las imágenes como estilo visual, producto o inspiración para el plan.
 
 ### Endpoints Principales
 
@@ -547,10 +545,20 @@ def validate_slug(slug: str) -> bool:
 #### Rate Limiting
 ```python
 class RateLimiter:
-    # 120 requests/minute por IP
+    # 120 requests/minute por IP (HTTP)
     # Tracking en memoria (sliding window)
-    # Header X-Forwarded-For aware
+    # X-Forwarded-For solo se usa si TRUST_PROXY=true (evita spoofing)
 ```
+
+#### WebSocket Limits
+
+| Límite | Valor | Descripción |
+|--------|-------|-------------|
+| `MAX_SESSIONS` | 500 | Sesiones simultáneas máximas |
+| `MAX_MESSAGES_PER_SESSION` | 80 | Historial máximo por sesión |
+| `MAX_WS_MESSAGES_PER_MINUTE` | 30 | Rate limit por conexión WebSocket |
+| `MAX_IMAGES_PER_MESSAGE` | 5 | Imágenes por mensaje |
+| `MAX_IMAGE_SIZE_B64` | 5 MB | Tamaño máximo por imagen (base64) |
 
 #### API Key (Opcional)
 ```python
@@ -629,7 +637,7 @@ const { isConnected, sendChat, lastMessage } = useWebSocket({
 
 ## Testing (`tests/`)
 
-### Cobertura Actual: 93 tests
+### Cobertura Actual: 92 tests
 
 ```
 tests/
@@ -641,7 +649,7 @@ tests/
 ├── test_cli_commands.py         #  4 tests - plan-execute CLI command
 ├── test_creative_engine.py      # 10 tests - CreativeEngine prompt generation
 ├── test_orchestrator_e2e.py     #  6 tests - Orchestrator e2e (build, no-text, policy, artifacts)
-├── test_pipeline_integration.py # 10 tests - Pipeline order, WebSocket, MCP
+├── test_pipeline_integration.py # 10 tests - Pipeline order, WebSocket, integración
 ├── test_security.py             # 13 tests - Validación, Rate limiting
 └── test_strategist.py           # 13 tests - KnowledgeBase, Intent detection
 ```
@@ -701,6 +709,7 @@ PORT=8000
 # Security (opcional)
 API_KEY=your-secret-key      # Si está set, requiere X-API-Key header
 CORS_ORIGINS=["http://localhost:3000"]  # JSON array
+TRUST_PROXY=true             # Confiar en X-Forwarded-For para rate limiting (solo con reverse-proxy)
 
 # Paths
 BRANDS_DIR=brands

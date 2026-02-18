@@ -19,7 +19,7 @@ app = typer.Typer(
 def generate(
     product: str = typer.Argument(..., help="Nombre del producto"),
     brand: str = typer.Argument(..., help="Nombre de la marca"),
-    style_ref: Path = typer.Argument(..., help="Path a la imagen de ESTILO (Pinterest)"),
+    style_ref: Path = typer.Argument(..., help="Path a la imagen de ESTILO (referencia visual)"),
     product_ref: Path = typer.Option(
         None,
         "--product-ref",
@@ -707,72 +707,6 @@ def estimate():
     console.print(f"  Imágenes: {count}")
     console.print(f"  Costo por imagen: ${cost / count:.4f}")
     console.print(f"  [bold]Costo total: ${cost:.2f}[/bold]\n")
-
-
-@app.command()
-def pinterest_search(
-    query: str = typer.Argument(..., help="Término de búsqueda"),
-    limit: int = typer.Option(10, "--limit", "-l", help="Cantidad de imágenes"),
-    download: bool = typer.Option(True, "--download/--no-download", help="Descargar imágenes"),
-):
-    """
-    Busca imágenes en Pinterest usando MCP.
-
-    Ejemplo:
-        cm pinterest-search "food photography minimal" --limit 5
-    """
-    import asyncio
-
-    from .services.mcp_client import MCPClientService
-
-    async def run_search():
-        service = MCPClientService()
-        try:
-            results = await service.search_pinterest(query, limit, download)
-            console.print(
-                f"\n[green][OK][/green] {len(results) if results else 0} imágenes encontradas"
-            )
-            if download:
-                console.print("[dim]Imágenes descargadas en references/[/dim]")
-            return results
-        except Exception as e:
-            console.print(f"[red][X] Error:[/red] {e}")
-            raise typer.Exit(1)
-
-    asyncio.run(run_search())
-
-
-@app.command()
-def mcp_tools(
-    server: str = typer.Argument("pinterest", help="Nombre del servidor MCP"),
-):
-    """
-    Lista los tools disponibles en un servidor MCP.
-
-    Ejemplo:
-        cm mcp-tools pinterest
-    """
-    import asyncio
-
-    from rich.table import Table
-
-    from .services.mcp_client import MCPClientService
-
-    async def list_tools():
-        service = MCPClientService()
-        try:
-            tools = await service.list_tools(server)
-            table = Table(title=f"Tools de {server}")
-            table.add_column("Tool", style="bold")
-            table.add_column("Descripción")
-            for tool in tools:
-                table.add_row(tool["name"], tool.get("description", "N/A"))
-            console.print(table)
-        except Exception as e:
-            console.print(f"[red][X] Error:[/red] {e}")
-            raise typer.Exit(1)
-
-    asyncio.run(list_tools())
 
 
 @app.command()

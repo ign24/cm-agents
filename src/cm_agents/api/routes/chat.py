@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -38,6 +39,29 @@ orchestrator = OrchestratorCampaignService(knowledge_dir=Path(settings.KNOWLEDGE
 conversations: dict[str, list[ChatMessage]] = {}
 pending_build_requests: dict[str, str] = {}
 session_brands: dict[str, str] = {}
+
+# Limits
+MAX_SESSIONS = 500
+MAX_MESSAGES_PER_SESSION = 80  # keep last N messages per session
+MAX_WS_MESSAGES_PER_MINUTE = 30  # per WebSocket connection
+MAX_IMAGES_PER_MESSAGE = 5
+MAX_IMAGE_SIZE_B64 = 5 * 1024 * 1024  # 5 MB base64 ≈ 3.75 MB decoded
+
+
+def _evict_oldest_session() -> None:
+    """Drop the oldest session when at capacity to prevent unbounded growth."""
+    if len(conversations) >= MAX_SESSIONS:
+        oldest = next(iter(conversations))
+        conversations.pop(oldest, None)
+        pending_build_requests.pop(oldest, None)
+        session_brands.pop(oldest, None)
+
+
+def _trim_conversation(session_id: str) -> None:
+    """Keep only the most recent messages to cap memory and context size."""
+    msgs = conversations.get(session_id)
+    if msgs and len(msgs) > MAX_MESSAGES_PER_SESSION:
+        conversations[session_id] = msgs[-(MAX_MESSAGES_PER_SESSION // 2):]
 
 
 def _is_build_confirmation(content: str) -> bool:
@@ -219,12 +243,24 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
     # Initialize conversation if new
     if session_id not in conversations:
+        _evict_oldest_session()
         conversations[session_id] = []
+
+    # Per-connection rate limit state
+    _ws_msg_timestamps: list[float] = []
 
     try:
         while True:
             # Receive message
             data = await websocket.receive_text()
+
+            # --- WebSocket rate limiting ---
+            _now = time.time()
+            _ws_msg_timestamps[:] = [t for t in _ws_msg_timestamps if _now - t < 60]
+            if len(_ws_msg_timestamps) >= MAX_WS_MESSAGES_PER_MINUTE:
+                await manager.send_error(session_id, "Rate limit exceeded. Please slow down.")
+                continue
+            _ws_msg_timestamps.append(_now)
 
             try:
                 message_data = json.loads(data)
@@ -242,8 +278,18 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
             elif msg_type == "chat":
                 # Handle chat message
                 content = message_data.get("data", {}).get("content", "")
-                images = message_data.get("data", {}).get("images", [])
+                raw_images = message_data.get("data", {}).get("images", [])
                 brand_slug = message_data.get("data", {}).get("brand")
+
+                # Validate and cap incoming images
+                images: list[str] = []
+                for img in raw_images[:MAX_IMAGES_PER_MESSAGE]:
+                    if not isinstance(img, str):
+                        continue
+                    if len(img) > MAX_IMAGE_SIZE_B64:
+                        logger.warning("Oversized image rejected for session %s", session_id)
+                        continue
+                    images.append(img)
                 workflow_mode = message_data.get("data", {}).get("mode", "plan")  # Default to plan
 
                 if brand_slug:
@@ -263,6 +309,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     timestamp=datetime.now(),
                 )
                 conversations[session_id].append(user_message)
+                _trim_conversation(session_id)
 
                 # Keep latest non-confirmation request as candidate for orchestrator build
                 if content and not _is_build_confirmation(content):
@@ -301,65 +348,13 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
 
                 # Process with StrategistAgent (include images as reference and workflow mode)
                 try:
-                    # Check if user wants Pinterest search
-                    pinterest_results = None
-                    if strategist._should_search_pinterest(content):
-                        # Extract search query from message
-                        import re
-
-                        query = re.sub(
-                            r"(busca|buscar|en)\s+(pinterest|pintrest)\s*",
-                            "",
-                            content,
-                            flags=re.IGNORECASE,
-                        ).strip()
-                        if not query:
-                            # Fallback: use intent to build query
-                            if brand:
-                                query = f"{brand.industry or 'product'} {content[:50]}"
-                            else:
-                                query = content[:50]
-
-                        # Search Pinterest using MCP (async)
-                        logger.info(f"Searching Pinterest for: {query}")
-                        try:
-                            pinterest_results = await strategist._search_pinterest_for_references(
-                                query, limit=5
-                            )
-                            if pinterest_results:
-                                logger.info(f"Found {len(pinterest_results)} Pinterest references")
-                                # Notify user via WebSocket
-                                await manager.send_to_session(
-                                    session_id,
-                                    {
-                                        "type": "pinterest_search",
-                                        "data": {
-                                            "query": query,
-                                            "results_count": len(pinterest_results),
-                                            "message": f"Encontré {len(pinterest_results)} referencias en Pinterest",
-                                        },
-                                    },
-                                )
-                        except Exception as e:
-                            logger.warning(f"Pinterest search failed: {e}")
-                            await manager.send_to_session(
-                                session_id,
-                                {
-                                    "type": "error",
-                                    "data": {
-                                        "message": f"No pude buscar en Pinterest: {e}. Continuando sin referencias.",
-                                    },
-                                },
-                            )
-
-                    # Pass workflow mode, Pinterest results y brand_slug (para pipeline)
+                    # Pass workflow mode and brand_slug (para pipeline)
                     response_content, plan = strategist.chat(
                         message=content,
                         brand=brand,
                         context=context if context else None,
                         images=images if images else None,
                         workflow_mode=workflow_mode,
-                        pinterest_results=pinterest_results,
                         brand_slug=brand_slug,
                     )
                 except Exception as e:
@@ -398,6 +393,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     timestamp=datetime.now(),
                 )
                 conversations[session_id].append(assistant_message)
+                _trim_conversation(session_id)
 
                 # Auto-generate if user requested it (auto-approve mode)
                 if plan and should_auto_generate:

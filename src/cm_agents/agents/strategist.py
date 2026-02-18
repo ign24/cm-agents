@@ -2,8 +2,7 @@
 StrategistAgent - Marketing/Creative Director for content planning.
 
 This agent interprets natural language requests and creates structured ContentPlans.
-It uses the Knowledge Base for marketing insights and can search Pinterest for references.
-Orchestrates the full workflow: Pinterest search → Plan creation → Pipeline execution.
+It uses the Knowledge Base for marketing insights and orchestrates planning/execution flows.
 """
 
 import json
@@ -22,7 +21,6 @@ from ..models.campaign_style import (
     get_preset,
 )
 from ..models.plan import ContentIntent, ContentPlan, ContentPlanItem
-from ..services.mcp_client import MCPClientService
 from .base import parse_data_url
 
 logger = logging.getLogger(__name__)
@@ -179,7 +177,7 @@ class StrategistAgent:
     - Understand natural language requests
     - Consult knowledge base for context
     - Create structured ContentPlans
-    - Suggest Pinterest search queries
+    - Suggest visual reference directions
     - Provide copy suggestions
     """
 
@@ -194,7 +192,6 @@ class StrategistAgent:
         self.model = model
         self.knowledge = KnowledgeBase(knowledge_dir)
         self.client: Anthropic | None = None
-        self.mcp_service: MCPClientService | None = None
 
     def _get_client(self) -> Anthropic | None:
         """Lazy initialization of Anthropic client."""
@@ -218,60 +215,12 @@ class StrategistAgent:
                 return None
         return self.client
 
-    def _get_mcp_service(self) -> MCPClientService | None:
-        """Lazy initialization of MCP service."""
-        if self.mcp_service is None:
-            try:
-                self.mcp_service = MCPClientService()
-            except Exception as e:
-                logger.warning(f"MCP service not available: {e}")
-                return None
-        return self.mcp_service
-
-    def _should_search_pinterest(self, message: str) -> bool:
-        """Detect if user wants to search Pinterest."""
-        pinterest_keywords = [
-            "busca en pinterest",
-            "buscar en pinterest",
-            "pinterest",
-            "referencias de pinterest",
-            "imágenes de pinterest",
-            "ideas de pinterest",
-        ]
-        message_lower = message.lower()
-        return any(kw in message_lower for kw in pinterest_keywords)
-
-    async def _search_pinterest_for_references(self, query: str, limit: int = 5) -> list[dict]:
-        """
-        Search Pinterest for reference images using MCP.
-
-        Args:
-            query: Search query
-            limit: Number of results
-
-        Returns:
-            List of Pinterest results with URLs and metadata
-        """
-        service = self._get_mcp_service()
-        if not service:
-            logger.warning("MCP service not available, cannot search Pinterest")
-            return []
-
-        try:
-            results = await service.search_pinterest(query, limit=limit, download=True)
-            logger.info(f"Pinterest search: {len(results)} results for '{query}'")
-            return results if results else []
-        except Exception as e:
-            logger.error(f"Pinterest search failed: {e}")
-            return []
-
     def create_plan(
         self,
         prompt: str,
         brand: Brand,
         brand_dir: Path,
         campaign: str | None = None,
-        pinterest_results: list[dict] | None = None,
     ) -> ContentPlan:
         """
         Create a content plan from a natural language prompt.
@@ -281,7 +230,6 @@ class StrategistAgent:
             brand: Brand configuration
             brand_dir: Path to brand directory
             campaign: Optional campaign name
-            pinterest_results: Optional Pinterest search results to use as references
 
         Returns:
             ContentPlan ready for approval and execution
@@ -312,7 +260,6 @@ class StrategistAgent:
             brand=brand,
             recommended_styles=recommended_styles,
             industry_info=industry_info,
-            pinterest_results=pinterest_results,
             enriched_context=enriched,
         )
 
@@ -787,7 +734,6 @@ class StrategistAgent:
         brand: Brand,
         recommended_styles: list[str],
         industry_info: dict,
-        pinterest_results: list[dict] | None = None,
         enriched_context: dict | None = None,
     ) -> list[ContentPlanItem]:
         """Generate plan items. Cada item.product debe ser el slug de un producto existente con fotos."""
@@ -827,19 +773,9 @@ class StrategistAgent:
         query_parts.append("instagram")
         reference_query = " ".join(query_parts)
 
-        # Extract reference URLs and local paths (shared for all items)
+        # Reference assets are resolved later by the generation pipeline.
         reference_urls: list[str] = []
         reference_local_paths: list[str] = []
-        if pinterest_results:
-            for result in pinterest_results[:3]:
-                if isinstance(result, dict):
-                    url = result.get("url") or result.get("image_url") or result.get("pin_url")
-                    if url:
-                        reference_urls.append(url)
-                    # Get local path if available (MCP downloads to references/)
-                    local_path = result.get("local_path")
-                    if local_path:
-                        reference_local_paths.append(local_path)
 
         # Detect variants count
         variants_count = 1
@@ -942,7 +878,6 @@ class StrategistAgent:
         context: list[dict] | None = None,
         images: list[str] | None = None,
         workflow_mode: str = "plan",
-        pinterest_results: list[dict] | None = None,
         brand_slug: str | None = None,
     ) -> tuple[str, ContentPlan | None]:
         """
@@ -986,16 +921,8 @@ class StrategistAgent:
 
         system_prompt = self._build_system_prompt(brand, brand_dir)
 
-        # Enhance message if Pinterest results were found
-        enhanced_message = message
-        if pinterest_results:
-            enhanced_message = (
-                f"{message}\n\n[Nota: Se encontraron {len(pinterest_results)} referencias de Pinterest. "
-                f"Las imágenes fueron descargadas y se usarán como referencia de estilo en la generación.]"
-            )
-
         # Build user message content: text + optional vision blocks for reference images
-        user_content: str | list[dict] = enhanced_message
+        user_content: str | list[dict] = message
         if images:
             blocks: list[dict] = [{"type": "text", "text": message}]
             for i, data_url in enumerate(images[:5]):  # cap at 5 images
@@ -1056,6 +983,7 @@ class StrategistAgent:
                 max_tokens=1024,
                 system=system_prompt,
                 messages=messages,
+                timeout=60.0,
             )
 
             response_text = response.content[0].text
@@ -1084,7 +1012,6 @@ class StrategistAgent:
                     prompt=message,
                     brand=brand,
                     brand_dir=plan_brand_dir,
-                    pinterest_results=pinterest_results,
                 )
 
                 # In BUILD mode, auto-approve if user wants to generate
@@ -1245,7 +1172,7 @@ Cuando el usuario apruebe el plan, el **GenerationPipeline** (CreativeEngine →
    - **Al menos una foto** en `photos/` (el Generador la usa para replicar el producto de forma exacta)
 
 2. **Referencia de estilo** (una de estas):
-   - `reference_urls` (imágenes de Pinterest ya buscadas/descargadas)
+   - `reference_urls` (links de referencia visual)
    - Imágenes adjuntas del usuario
    - O que exista en `brands/{marca}/references/` o en las fotos del producto
 
@@ -1266,8 +1193,8 @@ Pedile al usuario exactamente lo que el pipeline espera:
 3. **Si no hay productos con fotos en products/{marca}/:**
     "Para generar las imágenes, el siguiente paso necesita **productos configurados**: cada uno en products/{marca}/&lt;producto&gt;/ con **al menos una foto en photos/** (el generador la usa para replicar el producto). `product.json` es opcional. ¿Tenés productos cargados?"
 
-4. **Si no hay referencia de estilo (Pinterest, adjunto o en references/):**
-   "¿Tenés una imagen de referencia de estilo (Pinterest, mockup) o querés que busque en Pinterest? Si no, hace falta al menos una en brands/{marca}/references/ o en las fotos del producto."
+4. **Si no hay referencia de estilo (adjunto o en references/):**
+   "¿Tenés una imagen de referencia de estilo (mockup, inspiración visual)? Si no, hace falta al menos una en brands/{marca}/references/ o en las fotos del producto."
 
 5. **Si hay varios productos y el usuario no aclara cuál:**
    "¿Para qué producto es? (p. ej. hamburguesa, sprite)."
@@ -1310,14 +1237,7 @@ Tu trabajo es decidir **cuándo ejecutar cada worker** según el contexto:
 - "variantes", "varias opciones" → Sugerir múltiples variantes (4 es buen default)
 - "me gusta, ahora genera" → Auto-aprobar y ejecutar
 - "crear", "generar", "hacer" → Crear plan automáticamente
-- "busca en pinterest", "pinterest" → El backend ya buscó, recibís los resultados en pinterest_results
 - Si el mensaje empieza con "[MODO BUILD]" → Estás en BUILD mode, prioriza ejecución sobre planificación
-
-**Cuando recibís pinterest_results:**
-- Las imágenes ya fueron descargadas por el backend usando MCP
-- Agregás las URLs a los items del plan (item.reference_urls)
-- Mencioná en tu respuesta: "Encontré X referencias en Pinterest que usaré como inspiración"
-- El pipeline usará esas referencias automáticamente cuando se apruebe el plan
 
 **Cuando el usuario adjunte imágenes:**
 - Analizalas como experto en marketing: ¿qué transmite? ¿qué estilo tiene? ¿cómo lo usarías?

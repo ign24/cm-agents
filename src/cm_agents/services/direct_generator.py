@@ -2,7 +2,7 @@
 
 Flujo:
 1. Usuario sube imagen de producto + ocasión
-2. Pinterest refs para estilo visual
+2. Referencias visuales para estilo
 3. Responses API genera imagen BASE (sin texto)
 4. Responses API agrega texto profesional (edit)
 5. CascadeStyleManager mantiene coherencia
@@ -50,7 +50,7 @@ class DirectGenerator:
     """Generador directo usando Responses API de OpenAI.
 
     Flujo de 2 pasos:
-    1. generate_base_image(): Producto + Pinterest refs → Imagen sin texto
+    1. generate_base_image(): Producto + style refs → Imagen sin texto
     2. add_text_overlay(): Imagen base + StyleGuide → Imagen con texto AI
     """
 
@@ -72,17 +72,17 @@ class DirectGenerator:
     def generate_base_image(
         self,
         product_image: Path,
-        pinterest_refs: list[Path],
+        style_refs: list[Path],
         scene_prompt: str,
         style_guide: CampaignStyleGuide | None = None,
         output_path: Path | None = None,
         size: str = "1024x1536",
     ) -> tuple[Path, float]:
-        """Genera imagen base con producto y estilo de Pinterest.
+        """Genera imagen base con producto y referencias de estilo.
 
         Args:
             product_image: Imagen del producto subida por el usuario
-            pinterest_refs: Referencias de estilo de Pinterest
+            style_refs: Referencias de estilo
             scene_prompt: Descripción de la escena (sin mencionar texto)
             style_guide: Guía de estilo para coherencia
             output_path: Dónde guardar la imagen
@@ -93,7 +93,7 @@ class DirectGenerator:
         """
         console.print("\n[blue][DirectGen][/blue] Generando imagen base...")
         console.print(f"[dim]   Producto: {product_image.name}[/dim]")
-        console.print(f"[dim]   Referencias Pinterest: {len(pinterest_refs)}[/dim]")
+        console.print(f"[dim]   Referencias de estilo: {len(style_refs)}[/dim]")
 
         # Construir contenido multimodal
         content_parts = []
@@ -122,7 +122,7 @@ CRITICAL REQUIREMENTS:
 1. PRODUCT FIDELITY: The product must be EXACTLY as shown in the product image - same shape, colors, labels, brand, packaging. Do NOT modify the product appearance.
 2. NO TEXT: Do NOT add any text, prices, headlines, or typography to the image. Text will be added in a separate step.
 3. COMPOSITION: Leave clear space for text overlay (approximately top 20% or bottom 25% of the image).
-4. STYLE: Match the visual style, lighting, and mood from the Pinterest reference images.
+4. STYLE: Match the visual style, lighting, and mood from the style reference images.
 5. PROFESSIONAL QUALITY: Studio-quality lighting, sharp focus on product, cohesive color grading.
 
 Generate a single promotional image following these requirements."""
@@ -140,8 +140,8 @@ Generate a single promotional image following these requirements."""
             {"type": "input_image", "image_url": f"data:{product_media};base64,{product_b64}"}
         )
 
-        # Agregar referencias de Pinterest (para estilo visual)
-        if pinterest_refs:
+        # Agregar referencias visuales de estilo
+        if style_refs:
             content_parts.append(
                 {
                     "type": "input_text",
@@ -149,7 +149,7 @@ Generate a single promotional image following these requirements."""
                 }
             )
 
-            for i, ref_path in enumerate(pinterest_refs[:3]):  # Máximo 3 refs
+            for i, ref_path in enumerate(style_refs[:3]):  # Máximo 3 refs
                 if ref_path.exists():
                     ref_b64 = load_image_as_base64(ref_path)
                     ref_media = get_media_type(ref_path)
@@ -478,7 +478,7 @@ CRITICAL:
     def generate_complete(
         self,
         product_image: Path,
-        pinterest_refs: list[Path],
+        style_refs: list[Path],
         scene_prompt: str,
         style_guide: CampaignStyleGuide,
         product: Product,
@@ -492,7 +492,7 @@ CRITICAL:
 
         Args:
             product_image: Imagen del producto
-            pinterest_refs: Referencias de Pinterest
+            style_refs: Referencias de estilo
             scene_prompt: Descripción de escena
             style_guide: Guía de estilo
             product: Datos del producto
@@ -516,7 +516,7 @@ CRITICAL:
         base_path = output_dir / f"{product.name}_v{variant_number}_base.png"
         base_path, cost1 = self.generate_base_image(
             product_image=product_image,
-            pinterest_refs=pinterest_refs,
+            style_refs=style_refs,
             scene_prompt=scene_prompt,
             style_guide=style_guide,
             output_path=base_path,
